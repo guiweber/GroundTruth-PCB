@@ -1,0 +1,4 @@
+PyQt6>=6.6
+pyqtgraph>=0.13
+numpy>=1.24
+Pillow>=10.0
