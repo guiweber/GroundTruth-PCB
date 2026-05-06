@@ -87,8 +87,6 @@ class SyncViewer(QtWidgets.QWidget):
     # ---------- Mouse & Keyboard ----------
     def mouse_moved(self, pos):
         # Determine which viewbox the mouse is in
-        source_vb = None
-
         if self.vb1.sceneBoundingRect().contains(pos):
             source_vb = self.vb1
         elif self.vb2.sceneBoundingRect().contains(pos):
@@ -105,6 +103,32 @@ class SyncViewer(QtWidgets.QWidget):
         self.hLine1.setPos(y)
         self.vLine2.setPos(x)
         self.hLine2.setPos(y)
+
+    def keyPressEvent(self, event):
+
+        # Pan by a fraction of the visible Y span
+        frac = 0.05
+
+        # Get current view ranges
+        (_, _), (y0, y1) = self.vb1.viewRange()
+        step = (y1 - y0) * frac
+
+        dx = dy = 0
+
+        if event.key() in (Qt.Key.Key_A, Qt.Key.Key_Left):
+            dx = -step
+        elif event.key() in (Qt.Key.Key_D, Qt.Key.Key_Right):
+            dx = step
+        elif event.key() in (Qt.Key.Key_W, Qt.Key.Key_Up):
+            dy = step
+        elif event.key() in (Qt.Key.Key_S, Qt.Key.Key_Down):
+            dy = -step
+        elif event.key() == Qt.Key.Key_Escape:
+            self.vb1.autoRange()
+            return
+
+        if dx or dy:
+            self.vb1.translateBy(x=dx, y=dy)
 
     # ---------- Operations ----------
     def flip(self, which, axis):
