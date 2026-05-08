@@ -1,17 +1,19 @@
 from PyQt6 import QtWidgets, QtGui, QtCore
 
+LABEL_NO_IMG_TXT = "Drop two images\nor a .gtd document here"
+LABEL_ONE_IMG_TXT = "One image loaded\nDrop another image to continue"
 
 class DropZone(QtWidgets.QWidget):
     filesDropped = QtCore.pyqtSignal(list)
+    clear_requested = QtCore.pyqtSignal()
 
     def __init__(self):
         super().__init__()
 
         self.setAcceptDrops(True)
 
-        self.label = QtWidgets.QLabel(
-            "Drop two images\nor a .gtd document here"
-        )
+        # ------------ Drop Area --------------
+        self.label = QtWidgets.QLabel(LABEL_NO_IMG_TXT)
         self.label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.label.setStyleSheet("""
             QLabel {
@@ -20,6 +22,7 @@ class DropZone(QtWidgets.QWidget):
             }
         """)
 
+        # ------------ Image Preview --------------
         self.preview = QtWidgets.QLabel()
         self.preview.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.preview.setFixedSize(512, 512)
@@ -31,6 +34,26 @@ class DropZone(QtWidgets.QWidget):
         """)
         self.preview.hide()
 
+        self.clear_btn = QtWidgets.QPushButton("X", self.preview)
+        self.clear_btn.setFixedSize(26, 26)
+        self.clear_btn.clicked.connect(self.clear_requested.emit)
+        self.clear_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #222;
+                color: #ddd;
+                border: 1px solid #555;
+                border-radius: 13px;
+                font-weight: bold;
+                text-align: center;
+                padding: 0px;
+            }
+            QPushButton:hover {
+                background: #333;
+            }
+        """)
+        self.clear_btn.hide()
+
+        # ------------ Layout --------------
         layout = QtWidgets.QVBoxLayout(self)
         layout.addStretch()
         layout.addWidget(self.label, alignment=QtCore.Qt.AlignmentFlag.AlignCenter)
@@ -59,9 +82,22 @@ class DropZone(QtWidgets.QWidget):
         self.preview.setPixmap(pix)
         self.preview.show()
 
-        self.label.setText(
-            "One image loaded\nDrop another image to continue"
-        )
+        self.label.setText(LABEL_ONE_IMG_TXT)
+
+        m = 6  # margin inside preview
+        self.clear_btn.move(self.preview.width() - self.clear_btn.width() - m,m)
+
+        self._has_image = True
+        self.clear_btn.show()
+        self.update()
+
+    def clear_preview(self):
+        self._has_image = False
+        self.clear_btn.hide()
+        self.label.setText(LABEL_NO_IMG_TXT)
+        self.preview.clear()
+        self.preview.hide()
+        self.update()
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():

@@ -76,6 +76,10 @@ class Document:
         except Exception as e:
             return f"Failed to load image:\n{path}\n\n{e}"
 
+        if self.images:
+            if data.shape != self.images[0].shape:
+                return f"Image size mismatch, both images need to be of the same size"
+
         self.images.append(data)
 
     def __load_gtd(self, path: Path):

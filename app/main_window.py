@@ -27,7 +27,8 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.viewer)
         self.setCentralWidget(self.stack)
 
-        self.drop_zone.filesDropped.connect(self.handle_files_dropped)
+        self.drop_zone.filesDropped.connect(self.on_files_dropped)
+        self.drop_zone.clear_requested.connect(self.on_clear_requested)
 
         self.make_toolbar()
         self.update_ui_state()
@@ -52,7 +53,13 @@ class MainWindow(QMainWindow):
 
         self.toolbar.addAction("Rotate 90°", self.viewer.rotate)
 
-    def handle_files_dropped(self, paths):
+    def on_clear_requested(self):
+        if len(self.doc.images) == 1:
+            self.doc.clear()
+            self.drop_zone.clear_preview()
+            self.update_ui_state()
+
+    def on_files_dropped(self, paths):
         load_errors = self.doc.load_files(paths)
 
         if len(self.doc.images) == 1:
