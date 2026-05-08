@@ -1,5 +1,4 @@
 import sys
-import os
 import argparse
 from PyQt6.QtWidgets import QApplication
 

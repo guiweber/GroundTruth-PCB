@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QToolBar,
     QStackedWidget,
+    QFileDialog,
 )
 
 from app.sync_viewer import SyncViewer
@@ -39,7 +40,7 @@ class MainWindow(QMainWindow):
         self.toolbar = QToolBar("Adjustments")
         self.addToolBar(self.toolbar)
 
-        self.toolbar.addAction("Save to gtd", lambda: self.doc.save())
+        self.toolbar.addAction("Save", lambda: self.save())
 
         self.toolbar.addAction("Flip L ↔", lambda: self.viewer.flip(0, "h"))
         self.toolbar.addAction("Flip L ↕", lambda: self.viewer.flip(0, "v"))
@@ -72,6 +73,20 @@ class MainWindow(QMainWindow):
             load_errors = load_errors[:3]
         for e in load_errors:
             error_info("File loading error", e)
+
+    def save(self):
+        if self.doc.saved_gtd:
+            self.doc.save()
+        else:
+            self.save_as()
+
+    def save_as(self):
+        path, _ = QFileDialog.getSaveFileName(self, "Save document", "", "GroundTruth Document (*.gtd)")
+
+        if not path:
+            return
+
+        self.doc.save(path)
 
     def update_ui_state(self):
         if self.doc.is_loaded():

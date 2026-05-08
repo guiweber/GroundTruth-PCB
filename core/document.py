@@ -32,11 +32,11 @@ class Document:
             "model_version": DOCUMENT_MODEL_VERSION,
         }
 
-        self._loaded_from_gtd = False
-        self._gtd_path: Optional[Path] = Path("test.gtd") # TODO: Placeholder
+        self.saved_gtd = False
+        self._gtd_path: Optional[Path] = None
 
     def is_loaded(self) -> bool:
-        return self._loaded_from_gtd or len(self.images) >= 2
+        return len(self.images) >= 2
 
     def load_files(self, paths: List[str]):
         """ Tries to load the files from the list. Returns a list containing any load errors."""
@@ -109,9 +109,8 @@ class Document:
                 if not self.__validate_gtd(metadata, image_files):
                     return ["Not a valid gtd document"]
                 else:
-                    self.clear()
                     self.metadata = metadata
-                    self._loaded_from_gtd = True
+                    self.saved_gtd = True
                     self._gtd_path = path
                     self.images = image_files
 
@@ -130,16 +129,14 @@ class Document:
         else:
             return True
 
-    def save(self, path: Optional[Path] = None):
+    def save(self, path: Optional[str] = None):
         if path is None:
             path = self._gtd_path
-
-        if path is None or not path:
+        elif path and type(path) is str:
+            path = Path(path).with_suffix(DOCUMENT_EXT)
+        else:
             error_info("Save error", "No save path specified.")
             return
-
-        if path.suffix.lower() != DOCUMENT_EXT:
-            path = Path(str(path) + DOCUMENT_EXT)
 
         try:
             with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
@@ -161,7 +158,7 @@ class Document:
                     zf.writestr(f"image_{i}.png", buf.read())
 
             self._gtd_path = path
-            self._loaded_from_gtd = True
+            self.saved_gtd = True
 
         except Exception as e:
             error_info("Save error", str(e))
