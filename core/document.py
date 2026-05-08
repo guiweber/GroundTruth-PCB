@@ -39,8 +39,9 @@ class Document:
         return self._loaded_from_gtd or len(self.images) >= 2
 
     def load_files(self, paths: List[str]):
+        """ Tries to load the files from the list. Returns a list containing any load errors."""
         if self.is_loaded():
-            return
+            return []
 
         resolved = []
         for p in paths:
@@ -51,33 +52,81 @@ class Document:
 
         resolved = [p for p in resolved if p.exists() and p.is_file()]
         if not resolved:
-            return
+            return ["Files paths could not be resolved"]
 
         gtd_files = [p for p in resolved if p.suffix.lower() == DOCUMENT_EXT]
         if gtd_files:
-            self.load_gtd(gtd_files[0])
-            return
+            return self.__load_gtd(gtd_files[0])
 
+        errors = []
         for path in resolved:
+            err = self.__load_image(path)
+            if err is not None:
+                errors.append(err)
             if self.is_loaded():
                 break
-            self.load_image(path)
 
-    def load_image(self, path: Path):
-        if self.is_loaded():
-            return
+        return errors
 
+    def __load_image(self, path: Path):
         try:
             with Image.open(path) as img:
                 img = img.convert("RGB")
                 data = np.array(img)
         except Exception as e:
-            error_info("Image load error", f"Failed to load image:\n{path}\n\n{e}")
-            return
+            return f"Failed to load image:\n{path}\n\n{e}"
 
         self.images.append(data)
 
-    def save_gtd(self, path: Optional[Path] = None):
+    def __load_gtd(self, path: Path):
+        try:
+            if not zipfile.is_zipfile(path):
+                return ["Invalid .gtd file (not a zip archive)"]
+
+            with zipfile.ZipFile(path, "r") as zf:
+
+                # ---------------- Load ----------------
+                try:
+                    metadata = json.loads(zf.read("metadata.json").decode("utf-8"))
+                except Exception as e:
+                    return [f"Missing or invalid metadata in gtd document: \n{e}"]
+
+                image_files = sorted(
+                    [f for f in zf.namelist() if f.startswith("image_") and f.endswith(".png")]
+                )
+
+                for i, image_file in enumerate (image_files):
+                    raw = zf.read(image_file)
+
+                    with Image.open(io.BytesIO(raw)) as img:
+                        image_files[i] = np.array(img.convert("RGB"))
+
+                # ---------------- Validate and apply ----------------
+                if not self.__validate_gtd(metadata, image_files):
+                    return ["Not a valid gtd document"]
+                else:
+                    self.clear()
+                    self.metadata = metadata
+                    self._loaded_from_gtd = True
+                    self._gtd_path = path
+                    self.images = image_files
+
+            return []
+
+        except Exception as e:
+            self.clear()
+            return ["Document load error" + str(e)]
+
+    def __validate_gtd(self, metadata, image_files):
+        if (((metadata["extension"] != DOCUMENT_EXT or
+                metadata["document_type"] !=DOCUMENT_TYPE) or
+                len(image_files) != 2) or
+                image_files[0].shape != image_files[1].shape):
+            return False
+        else:
+            return True
+
+    def save(self, path: Optional[Path] = None):
         if path is None:
             path = self._gtd_path
 
@@ -112,54 +161,6 @@ class Document:
 
         except Exception as e:
             error_info("Save error", str(e))
-
-    def load_gtd(self, path: Path):
-        try:
-            if not zipfile.is_zipfile(path):
-                error_info("Load error", "Invalid .gtd file (not a zip archive)")
-                return
-
-            with zipfile.ZipFile(path, "r") as zf:
-
-                # ---------------- Load ----------------
-                try:
-                    metadata = json.loads(zf.read("metadata.json").decode("utf-8"))
-                except Exception as e:
-                    error_info("Load error", f"Missing or invalid metadata\n{e}")
-                    return
-
-                image_files = sorted(
-                    [f for f in zf.namelist() if f.startswith("image_") and f.endswith(".png")]
-                )
-
-                for i, image_file in enumerate (image_files):
-                    raw = zf.read(image_file)
-
-                    with Image.open(io.BytesIO(raw)) as img:
-                        image_files[i] = np.array(img.convert("RGB"))
-
-                # ---------------- Validate and apply ----------------
-                if self.validate_gtd(metadata, image_files):
-
-                    self.clear()
-                    self.metadata = metadata
-                    self._loaded_from_gtd = True
-                    self._gtd_path = path
-                    self.images = image_files
-
-        except Exception as e:
-            self.clear()
-            error_info("Document load error", str(e))
-
-    def validate_gtd(self, metadata, image_files):
-        if (((metadata["extension"] != DOCUMENT_EXT or
-                metadata["document_type"] !=DOCUMENT_TYPE) or
-                len(image_files) != 2) or
-                image_files[0].shape != image_files[1].shape):
-            error_info("File validation error", "Not a valid GTD document")
-            return False
-        else:
-            return True
 
     def flip(self, which, axis):
         self.images[which] = np.fliplr(self.images[which]) if axis == "h" else np.flipud(self.images[which])

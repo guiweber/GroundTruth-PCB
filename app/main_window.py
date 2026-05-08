@@ -2,9 +2,13 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QMainWindow,
     QToolBar,
+    QStackedWidget,
 )
 
 from app.sync_viewer import SyncViewer
+from app.drop_zone import DropZone
+from core.document import Document
+from utils.errors import error_info
 
 
 class MainWindow(QMainWindow):
@@ -13,30 +17,65 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("GroundTruth - PCB Analysis")
 
-        self.viewer = SyncViewer(cli_arguments)
-        self.setCentralWidget(self.viewer)
+        self.doc = Document(cli_arguments)
+
+        self.viewer = SyncViewer(self.doc)
+        self.drop_zone = DropZone()
+
+        self.stack = QStackedWidget()
+        self.stack.addWidget(self.drop_zone)
+        self.stack.addWidget(self.viewer)
+        self.setCentralWidget(self.stack)
+
+        self.drop_zone.filesDropped.connect(self.handle_files_dropped)
+
+        self.make_toolbar()
+        self.update_ui_state()
 
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
-        self.make_toolbar()
-
     def make_toolbar(self):
-        tb = QToolBar("Adjustments")
-        self.addToolBar(tb)
+        self.toolbar = QToolBar("Adjustments")
+        self.addToolBar(self.toolbar)
 
-        tb.addAction("Save to gtd", lambda: self.viewer.save())
+        self.toolbar.addAction("Save to gtd", lambda: self.doc.save())
 
-        tb.addAction("Flip L ↔", lambda: self.viewer.flip(0, "h"))
-        tb.addAction("Flip L ↕", lambda: self.viewer.flip(0, "v"))
+        self.toolbar.addAction("Flip L ↔", lambda: self.viewer.flip(0, "h"))
+        self.toolbar.addAction("Flip L ↕", lambda: self.viewer.flip(0, "v"))
 
-        tb.addSeparator()
+        self.toolbar.addSeparator()
 
-        tb.addAction("Flip R ↔", lambda: self.viewer.flip(1, "h"))
-        tb.addAction("Flip R ↕", lambda: self.viewer.flip(1, "v"))
+        self.toolbar.addAction("Flip R ↔", lambda: self.viewer.flip(1, "h"))
+        self.toolbar.addAction("Flip R ↕", lambda: self.viewer.flip(1, "v"))
 
-        tb.addSeparator()
+        self.toolbar.addSeparator()
 
-        tb.addAction("Rotate 90°", self.viewer.rotate)
+        self.toolbar.addAction("Rotate 90°", self.viewer.rotate)
+
+    def handle_files_dropped(self, paths):
+        load_errors = self.doc.load_files(paths)
+
+        if len(self.doc.images) == 1:
+            self.drop_zone.set_preview_image(self.doc.images[0])
+
+        self.update_ui_state()
+
+        # Only display errors after UI update in case some files were successful
+        if len(load_errors) > 3:
+            load_errors = load_errors[:3]
+        for e in load_errors:
+            error_info("File loading error", e)
+
+    def update_ui_state(self):
+        if self.doc.is_loaded():
+            self.viewer.update_images()
+            self.stack.setCurrentWidget(self.viewer)
+            self.toolbar.setEnabled(True)
+        else:
+            self.stack.setCurrentWidget(self.drop_zone)
+            self.toolbar.setEnabled(False)
 
     def keyPressEvent(self, event):
-        self.viewer.handle_key_press(event)
+        """ Ensure events are processed if the window and not the viewer is in focus"""
+        if self.doc.is_loaded():
+            self.viewer.keyPressEvent(event)

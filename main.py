@@ -17,13 +17,8 @@ if __name__ == "__main__":
         parser.error("At most two images or one .gtd file may be specified")
 
     app = QApplication(sys.argv)
-    #
-    if len(args.files):
-        win = MainWindow(args.files)
-    else:
-        #win = MainWindow([os.path.expanduser(r'~/Downloads/front.jpg'), os.path.expanduser(r'~/Downloads/back.jpg')])
-        win = MainWindow([os.path.expanduser(r'test.gtd')])
 
+    win = MainWindow(args.files)
     win.show()
 
     sys.exit(app.exec())

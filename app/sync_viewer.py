@@ -2,16 +2,13 @@ from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt
 import pyqtgraph as pg
 
-from core.document import Document
-
-
 class SyncViewer(QtWidgets.QWidget):
-    def __init__(self, cli_arguments):
+    def __init__(self, document):
         super().__init__()
 
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
-        self.doc = Document(cli_arguments)
+        self.doc = document
 
         # ---------- Views ----------
         self.glw = pg.GraphicsLayoutWidget()
@@ -29,8 +26,7 @@ class SyncViewer(QtWidgets.QWidget):
         self.vb2.setXLink(self.vb1)
         self.vb2.setYLink(self.vb1)
 
-        self.img_items = [pg.ImageItem(self.doc.images[0], axisOrder="row-major"),
-                          pg.ImageItem(self.doc.images[1], axisOrder="row-major")]
+        self.img_items = [pg.ImageItem(axisOrder="row-major"), pg.ImageItem(axisOrder="row-major")]
 
         self.vb1.addItem(self.img_items[0])
         self.vb2.addItem(self.img_items[1])
@@ -113,9 +109,9 @@ class SyncViewer(QtWidgets.QWidget):
 
     def rotate(self):
         self.doc.rotate()
+        self.update_images()
+
+    def update_images(self):
         self.img_items[0].setImage(self.doc.images[0], autoLevels=False)
         self.img_items[1].setImage(self.doc.images[1], autoLevels=False)
         self.vb1.autoRange()
-
-    def save(self):
-        self.doc.save_gtd()
