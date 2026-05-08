@@ -8,12 +8,12 @@ from app.sync_viewer import SyncViewer
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, cli_images):
+    def __init__(self, cli_arguments):
         super().__init__()
 
         self.setWindowTitle("GroundTruth - PCB Analysis")
 
-        self.viewer = SyncViewer(*cli_images)
+        self.viewer = SyncViewer(cli_arguments)
         self.setCentralWidget(self.viewer)
 
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -23,6 +23,8 @@ class MainWindow(QMainWindow):
     def make_toolbar(self):
         tb = QToolBar("Adjustments")
         self.addToolBar(tb)
+
+        tb.addAction("Save to gtd", lambda: self.viewer.save())
 
         tb.addAction("Flip L ↔", lambda: self.viewer.flip(0, "h"))
         tb.addAction("Flip L ↕", lambda: self.viewer.flip(0, "v"))

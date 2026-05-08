@@ -1,19 +1,17 @@
-import numpy as np
-from PIL import Image
-
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt
 import pyqtgraph as pg
 
+from core.document import Document
+
 
 class SyncViewer(QtWidgets.QWidget):
-    def __init__(self, img1, img2):
+    def __init__(self, cli_arguments):
         super().__init__()
 
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
-        self.img1 = np.array(Image.open(img1))
-        self.img2 = np.array(Image.open(img2))
+        self.doc = Document(cli_arguments)
 
         # ---------- Views ----------
         self.glw = pg.GraphicsLayoutWidget()
@@ -31,11 +29,11 @@ class SyncViewer(QtWidgets.QWidget):
         self.vb2.setXLink(self.vb1)
         self.vb2.setYLink(self.vb1)
 
-        self.img_item1 = pg.ImageItem(self.img1, axisOrder="row-major")
-        self.img_item2 = pg.ImageItem(self.img2, axisOrder="row-major")
+        self.img_items = [pg.ImageItem(self.doc.images[0], axisOrder="row-major"),
+                          pg.ImageItem(self.doc.images[1], axisOrder="row-major")]
 
-        self.vb1.addItem(self.img_item1)
-        self.vb2.addItem(self.img_item2)
+        self.vb1.addItem(self.img_items[0])
+        self.vb2.addItem(self.img_items[1])
 
         self.vb1.enableAutoRange()
         self.vb2.disableAutoRange()
@@ -109,18 +107,15 @@ class SyncViewer(QtWidgets.QWidget):
 
     # ---------- Operations ----------
     def flip(self, which, axis):
-        if which == 0:
-            self.img1 = np.fliplr(self.img1) if axis == "h" else np.flipud(self.img1)
-            self.img_item1.setImage(self.img1, autoLevels=False)
-        else:
-            self.img2 = np.fliplr(self.img2) if axis == "h" else np.flipud(self.img2)
-            self.img_item2.setImage(self.img2, autoLevels=False)
-
+        self.doc.flip(which, axis)
+        self.img_items[which].setImage(self.doc.images[which], autoLevels=False)
         self.vb1.autoRange()
 
     def rotate(self):
-        self.img1 = np.rot90(self.img1, -1)
-        self.img2 = np.rot90(self.img2, -1)
-        self.img_item1.setImage(self.img1, autoLevels=False)
-        self.img_item2.setImage(self.img2, autoLevels=False)
+        self.doc.rotate()
+        self.img_items[0].setImage(self.doc.images[0], autoLevels=False)
+        self.img_items[1].setImage(self.doc.images[1], autoLevels=False)
         self.vb1.autoRange()
+
+    def save(self):
+        self.doc.save_gtd()
