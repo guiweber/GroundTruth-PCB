@@ -32,6 +32,10 @@ class Document:
             "model_version": DOCUMENT_MODEL_VERSION,
         }
 
+
+        self.config = {
+            "axis_inverted": ({"x":False, "y": False}, {"x":False, "y": False}),
+        }
         self.saved_gtd = False
         self._gtd_path: Optional[Path] = None
 
@@ -92,8 +96,9 @@ class Document:
                 # ---------------- Load ----------------
                 try:
                     metadata = json.loads(zf.read("metadata.json").decode("utf-8"))
+                    config = json.loads(zf.read("config.json").decode("utf-8"))
                 except Exception as e:
-                    return [f"Missing or invalid metadata in gtd document: \n{e}"]
+                    return [f"Missing or invalid data files in gtd document: \n{e}"]
 
                 image_files = sorted(
                     [f for f in zf.namelist() if f.startswith("image_") and f.endswith(".png")]
@@ -110,6 +115,7 @@ class Document:
                     return ["Not a valid gtd document"]
                 else:
                     self.metadata = metadata
+                    self.config = config
                     self.saved_gtd = True
                     self._gtd_path = path
                     self.images = image_files
@@ -141,10 +147,15 @@ class Document:
         try:
             with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
 
-                # ---------------- metadata ----------------
+                # ---------------- metadata & config ----------------
                 zf.writestr(
                     "metadata.json",
                     json.dumps(self.metadata, indent=2)
+                )
+
+                zf.writestr(
+                    "config.json",
+                    json.dumps(self.config, indent=2)
                 )
 
                 # ---------------- images ----------------

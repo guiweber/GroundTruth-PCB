@@ -23,6 +23,10 @@ class SyncViewer(QtWidgets.QWidget):
         self.vb1.setAspectLocked(True)
         self.vb2.setAspectLocked(True)
 
+        # Disable the right click menu
+        self.vb1.setMenuEnabled(False)
+        self.vb2.setMenuEnabled(False)
+
         self.vb2.setXLink(self.vb1)
         self.vb2.setYLink(self.vb1)
 
@@ -103,15 +107,35 @@ class SyncViewer(QtWidgets.QWidget):
 
     # ---------- Operations ----------
     def flip(self, which, axis):
+        """ Flip the image """
         self.doc.flip(which, axis)
         self.img_items[which].setImage(self.doc.images[which], autoLevels=False)
         self.vb1.autoRange()
 
+    def invert(self, which, axis):
+        """ Invert the viewbox axis"""
+        viewboxes = [self.vb1, self.vb2]
+        if axis == "x":
+            viewboxes[which].invertX(not viewboxes[which].xInverted())
+            self.doc.config["axis_inverted"][which][axis] = viewboxes[which].xInverted()
+        elif axis == "y":
+            viewboxes[which].invertY(not viewboxes[which].yInverted())
+            self.doc.config["axis_inverted"][which][axis] = viewboxes[which].yInverted()
+
     def rotate(self):
+        """ Rotate the image """
         self.doc.rotate()
         self.update_images()
 
     def update_images(self):
+        """ Update the images in the UI from the document """
         self.img_items[0].setImage(self.doc.images[0], autoLevels=False)
         self.img_items[1].setImage(self.doc.images[1], autoLevels=False)
         self.vb1.autoRange()
+
+    def update_axes(self):
+        """ Update the axes from the document """
+        self.vb1.invertX(self.doc.config["axis_inverted"][0]["x"])
+        self.vb1.invertY(self.doc.config["axis_inverted"][0]["y"])
+        self.vb2.invertX(self.doc.config["axis_inverted"][1]["x"])
+        self.vb2.invertY(self.doc.config["axis_inverted"][1]["y"])

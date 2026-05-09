@@ -54,6 +54,16 @@ class MainWindow(QMainWindow):
 
         self.toolbar.addAction("Rotate 90°", self.viewer.rotate)
 
+        self.toolbar.addSeparator()
+
+        self.toolbar.addAction("Invert X L", lambda: self.viewer.invert(0, "x"))
+        self.toolbar.addAction("Invert Y L", lambda: self.viewer.invert(0, "y"))
+
+        self.toolbar.addSeparator()
+
+        self.toolbar.addAction("Invert X R", lambda: self.viewer.invert(1, "x"))
+        self.toolbar.addAction("Invert Y R", lambda: self.viewer.invert(1, "y"))
+
     def on_clear_requested(self):
         if len(self.doc.images) == 1:
             self.doc.clear()
@@ -91,6 +101,7 @@ class MainWindow(QMainWindow):
     def update_ui_state(self):
         if self.doc.is_loaded():
             self.viewer.update_images()
+            self.viewer.update_axes()
             self.stack.setCurrentWidget(self.viewer)
             self.toolbar.setEnabled(True)
         else:
