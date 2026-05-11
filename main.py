@@ -8,7 +8,7 @@ from app.main_window import MainWindow
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("files", nargs="*", help="0-2 image paths")
+    parser.add_argument("files", nargs="*", help="Optional paths to one ground truth document (.gtd) or 1-2 images")
 
     args = parser.parse_args()
 
