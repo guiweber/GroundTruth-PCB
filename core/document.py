@@ -1,8 +1,10 @@
 import zipfile
 import io
 import json
+import uuid
 from pathlib import Path
 import numpy as np
+import pickle
 from PIL import Image
 from typing import List, Optional
 
@@ -13,8 +15,23 @@ DOCUMENT_TYPE = "Ground Truth PCB Analysis Document"
 DOCUMENT_FORMAT_VERSION = 1
 DOCUMENT_MODEL_VERSION = 1
 
+DEFAULT_LAYER_COUNT = 10
+
 
 class Document:
+
+    DEFAULT_LAYER_COLORS = [
+        "#e6194b",
+        "#3cb44b",
+        "#ffe119",
+        "#4363d8",
+        "#f58231",
+        "#911eb4",
+        "#46f0f0",
+        "#f032e6",
+        "#bcf60c",
+        "#fabebe",
+    ]
 
     def __init__(self, paths: Optional[List[str]] = None):
         self.clear()
@@ -23,7 +40,10 @@ class Document:
 
     def clear(self):
         self.images: List[np.ndarray] = []
-        self.layers = []  # TODO: Placeholder
+        self.current_layer_index = 0
+        self.layers = []
+        for i in range(DEFAULT_LAYER_COUNT):
+            self.add_layer()
 
         self.metadata = {
             "extension": DOCUMENT_EXT,
@@ -32,12 +52,11 @@ class Document:
             "model_version": DOCUMENT_MODEL_VERSION,
         }
 
-
         self.config = {
-            "axis_inverted": ({"x":False, "y": False}, {"x":False, "y": False}),
+            "axis_inverted": ({"x": False, "y": False}, {"x": False, "y": False}),
         }
         self.saved_gtd = False
-        self._gtd_path: Optional[Path] = None
+        self._gtd_path: Optional[Path] = None        
 
     def is_loaded(self) -> bool:
         return len(self.images) >= 2
@@ -100,25 +119,34 @@ class Document:
                 except Exception as e:
                     return [f"Missing or invalid data files in gtd document: \n{e}"]
 
+                layers_data = None
+                if "layers.pkl" in zf.namelist():
+                    try:
+                        layers_data = pickle.loads(zf.read("layers.pkl"))
+                    except Exception as e:
+                        return [f"Unable to read layer informatoin from file: \n{e}"]
+
                 image_files = sorted(
                     [f for f in zf.namelist() if f.startswith("image_") and f.endswith(".png")]
                 )
 
-                for i, image_file in enumerate (image_files):
+                for i, image_file in enumerate(image_files):
                     raw = zf.read(image_file)
 
                     with Image.open(io.BytesIO(raw)) as img:
                         image_files[i] = np.array(img.convert("RGB"))
 
                 # ---------------- Validate and apply ----------------
-                if not self.__validate_gtd(metadata, image_files):
+                if not self.__validate_gtd(metadata, image_files, layers_data):
                     return ["Not a valid gtd document"]
-                else:
-                    self.metadata = metadata
-                    self.config = config
-                    self.saved_gtd = True
-                    self._gtd_path = path
-                    self.images = image_files
+
+                self.metadata = metadata
+                self.config = config
+                self.saved_gtd = True
+                self._gtd_path = path
+                self.images = image_files
+                if layers_data is not None:
+                    self.layers = layers_data
 
             return []
 
@@ -126,14 +154,21 @@ class Document:
             self.clear()
             return ["Document load error" + str(e)]
 
-    def __validate_gtd(self, metadata, image_files):
+    def __validate_gtd(self, metadata, image_files, layers_data):
         if (((metadata["extension"] != DOCUMENT_EXT or
-                metadata["document_type"] !=DOCUMENT_TYPE) or
+                metadata["document_type"] != DOCUMENT_TYPE) or
                 len(image_files) != 2) or
                 image_files[0].shape != image_files[1].shape):
             return False
-        else:
-            return True
+
+        if not isinstance(layers_data, list):
+            return False
+
+        return True
+    
+    def add_layer(self):
+        color = self.DEFAULT_LAYER_COLORS[len(self.layers) % len(self.DEFAULT_LAYER_COLORS)]
+        self.layers.append(Layer(name=f"Layer {len(self.layers) + 1}", color=color))
 
     def save(self, path: Optional[str] = None):
         if path is None:
@@ -158,6 +193,11 @@ class Document:
                     json.dumps(self.config, indent=2)
                 )
 
+                zf.writestr(
+                    "layers.pkl",
+                    pickle.dumps(self.layers)
+                )
+
                 # ---------------- images ----------------
                 for i, img in enumerate(self.images):
                     pil_img = Image.fromarray(img, mode="RGB")
@@ -180,3 +220,23 @@ class Document:
     def rotate(self):
         self.images[0] = np.rot90(self.images[0], -1)
         self.images[1] = np.rot90(self.images[1], -1)
+
+
+""" Layer data structure used for storing annotation layer information and items. """
+
+class Layer:
+
+    def __init__(self, name: str, color: str, visible: bool = True, alpha: float = 0.3):
+        self.uid= str(uuid.uuid4())
+        self.name = name
+        self.color = color
+        self.visible = visible
+        self.alpha = alpha
+        self.items = ([],[])
+
+    def __getitem__ (self, key: int):
+        return self.items[key]
+    
+    def is_empty(self):
+        return len(self.items[0]) == 0 and len(self.items[1]) == 0
+

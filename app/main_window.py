@@ -4,10 +4,14 @@ from PyQt6.QtWidgets import (
     QToolBar,
     QStackedWidget,
     QFileDialog,
+    QWidget,
+    QHBoxLayout,
+    QSplitter,
 )
 
 from app.sync_viewer import SyncViewer
 from app.drop_zone import DropZone
+from app.layer_panel import LayerPanel
 from core.document import Document
 from utils.errors import error_info
 
@@ -21,13 +25,33 @@ class MainWindow(QMainWindow):
         self.doc = Document(cli_arguments)
 
         self.viewer = SyncViewer(self.doc)
+        self.layer_panel = LayerPanel(self.doc, self.viewer)
         self.drop_zone = DropZone()
 
         self.stack = QStackedWidget()
+
+        self.splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.splitter.setChildrenCollapsible(False)
+        self.splitter.addWidget(self.layer_panel)
+        self.splitter.addWidget(self.viewer)
+        self.splitter.setHandleWidth(5)
+        self.splitter.setStretchFactor(0, 0)
+        self.splitter.setStretchFactor(1, 1)
+        self.splitter.setSizes([220, 1800])
+
+        self.content_widget = QWidget()
+        self.content_layout = QHBoxLayout()
+        self.content_layout.setContentsMargins(0, 0, 0, 0)
+        self.content_layout.setSpacing(0)
+        self.content_layout.addWidget(self.splitter)
+        self.content_widget.setLayout(self.content_layout)
+
         self.stack.addWidget(self.drop_zone)
-        self.stack.addWidget(self.viewer)
+        self.stack.addWidget(self.content_widget)
         self.setCentralWidget(self.stack)
 
+        # self.layer_panel.layerChanged.connect(self.viewer.select_layer)
+        self.layer_panel.panelMinimized.connect(self.on_layer_panel_minimized)
         self.drop_zone.filesDropped.connect(self.on_files_dropped)
         self.drop_zone.clear_requested.connect(self.on_clear_requested)
 
@@ -63,6 +87,19 @@ class MainWindow(QMainWindow):
 
         self.toolbar.addAction("Invert X R", lambda: self.viewer.invert(1, "x"))
         self.toolbar.addAction("Invert Y R", lambda: self.viewer.invert(1, "y"))
+
+    def on_layer_panel_minimized(self, minimized):
+            # Preserve the viewboxes range
+            range, state = self.viewer.get_state()
+            
+            # Updates the splitter to match the panel's size
+            sizes = self.splitter.sizes()
+            sizes[0] = 0
+            self.splitter.setSizes(sizes)
+            
+            # Restore the viewboxes range
+            self.viewer.set_state(range, state)
+            
 
     def on_clear_requested(self):
         if len(self.doc.images) == 1:
@@ -102,7 +139,7 @@ class MainWindow(QMainWindow):
         if self.doc.is_loaded():
             self.viewer.update_images()
             self.viewer.update_axes()
-            self.stack.setCurrentWidget(self.viewer)
+            self.stack.setCurrentWidget(self.content_widget)
             self.toolbar.setEnabled(True)
         else:
             self.stack.setCurrentWidget(self.drop_zone)

@@ -112,6 +112,10 @@ class SyncViewer(QtWidgets.QWidget):
         self.img_items[which].setImage(self.doc.images[which], autoLevels=False)
         self.vb1.autoRange()
 
+    def get_state(self):
+        """ Get the current view range/state of the first viewbox """
+        return self.vb1.viewRange(), self.vb1.getState()
+
     def invert(self, which, axis):
         """ Invert the viewbox axis"""
         viewboxes = [self.vb1, self.vb2]
@@ -126,6 +130,12 @@ class SyncViewer(QtWidgets.QWidget):
         """ Rotate the image """
         self.doc.rotate()
         self.update_images()
+
+    def set_state(self, range, state):
+        """ Set the viewboxes range/state """
+        self.vb1.setRange(xRange=range[0], yRange=range[1], padding=0)
+        self.vb1.setState(state)
+        self.vb1.update()
 
     def update_images(self):
         """ Update the images in the UI from the document """
