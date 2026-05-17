@@ -1,14 +1,16 @@
-import zipfile
 import io
 import json
-import uuid
-from pathlib import Path
-import numpy as np
 import pickle
-from PIL import Image
+import uuid
+import zipfile
+from pathlib import Path
 from typing import List, Optional
 
+import numpy as np
+from PIL import Image
+
 from utils.errors import error_info
+from core.annotations import Annotation
 
 DOCUMENT_EXT = ".gtd"
 DOCUMENT_TYPE = "Ground Truth PCB Analysis Document"
@@ -42,7 +44,7 @@ class Document:
         self.images: List[np.ndarray] = []
         self.current_layer_index = 0
         self.layers = []
-        for i in range(DEFAULT_LAYER_COUNT):
+        for _ in range(DEFAULT_LAYER_COUNT):
             self.add_layer()
 
         self.metadata = {
@@ -222,21 +224,31 @@ class Document:
         self.images[1] = np.rot90(self.images[1], -1)
 
 
-""" Layer data structure used for storing annotation layer information and items. """
-
 class Layer:
 
     def __init__(self, name: str, color: str, visible: bool = True, alpha: float = 0.3):
-        self.uid= str(uuid.uuid4())
+        self.uid = str(uuid.uuid4())
         self.name = name
         self.color = color
         self.visible = visible
         self.alpha = alpha
-        self.items = ([],[])
+        self.items: List[Annotation] = []
 
-    def __getitem__ (self, key: int):
+    def __getitem__(self, key: int):
         return self.items[key]
-    
+
+    def get_annotations(self):
+        return self.items
+
+    def add_annotation(self, annotation: Annotation):
+        self.items.append(annotation)
+
+    def remove_annotation(self, annotation: Annotation):
+        self.items = [item for item in self.items if item.uid != annotation.uid]
+
+    def clear_annotations(self):
+        self.items = []
+
     def is_empty(self):
-        return len(self.items[0]) == 0 and len(self.items[1]) == 0
+        return len(self.get_annotations()) == 0
 

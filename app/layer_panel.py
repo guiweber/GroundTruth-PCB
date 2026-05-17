@@ -101,7 +101,7 @@ class LayerPanel(QWidget):
     def __init__(self, document, parent=None):
         super().__init__(parent)
         self.doc = document
-        self.selected_index = len(self.doc.layers) - 1
+        self.selected_index = max(0, min(self.doc.current_layer_index, len(self.doc.layers) - 1))
         self.minimized = False
         self.expanded_min_width = 220
         self.collapsed_width = 50
@@ -249,7 +249,7 @@ class LayerPanel(QWidget):
             button.clicked.connect(lambda checked, i=index: self.select_layer(i))
             self.collapsed_buttons_layout.addWidget(button)
 
-        if self.selected_index < self.layer_list.count() and self.layer_list.currentRow() != self.selected_index:
+        if self.selected_index < self.layer_list.count():
             self.layer_list.setCurrentRow(self.selected_index)
         self.update_property_panel()
 
@@ -277,8 +277,11 @@ class LayerPanel(QWidget):
         if layer_index is None:
             return
         self.doc.layers[layer_index].visible = not self.doc.layers[layer_index].visible
+        if self.layer_list.currentRow() < 0:
+            self.selected_index = layer_index
+            self.doc.current_layer_index = layer_index
         self.refresh_layers()
-        self.layerChanged.emit(self.selected_index)
+        self.layerChanged.emit(layer_index)
 
     def toggle_all_layers(self):
         if not self.doc.layers:
@@ -372,8 +375,8 @@ class LayerPanel(QWidget):
             if widget is not None:
                 order.append(widget.uid)
 
-        map = {layer.uid: layer for layer in self.doc.layers}
-        self.doc.layers[0] = [map[uid] for uid in order if uid in map]
+        layer_map = {layer.uid: layer for layer in self.doc.layers}
+        self.doc.layers = [layer_map[uid] for uid in order if uid in layer_map]
         self.selected_index = max(0, min(self.selected_index, len(self.doc.layers) - 1))
         self.doc.current_layer_index = self.selected_index
         self.refresh_layers()

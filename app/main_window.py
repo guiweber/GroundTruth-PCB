@@ -54,6 +54,7 @@ class MainWindow(QMainWindow):
         self.layer_panel.panelMinimized.connect(self.on_layer_panel_minimized)
         self.drop_zone.filesDropped.connect(self.on_files_dropped)
         self.drop_zone.clear_requested.connect(self.on_clear_requested)
+        self.layer_panel.layerChanged.connect(lambda _: self.viewer.update_annotations())
 
         self.make_toolbar()
         self.update_ui_state()
@@ -129,11 +130,8 @@ class MainWindow(QMainWindow):
 
     def save_as(self):
         path, _ = QFileDialog.getSaveFileName(self, "Save document", "", "GroundTruth Document (*.gtd)")
-
-        if not path:
-            return
-
-        self.doc.save(path)
+        if path:
+            self.doc.save(path)
 
     def update_ui_state(self):
         if self.doc.is_loaded():
@@ -145,7 +143,97 @@ class MainWindow(QMainWindow):
             self.stack.setCurrentWidget(self.drop_zone)
             self.toolbar.setEnabled(False)
 
-    def keyPressEvent(self, event):
-        """ Ensure events are processed if the window and not the viewer is in focus"""
+    def keyReleaseEvent(self, event):
         if self.doc.is_loaded():
-            self.viewer.keyPressEvent(event)
+            if event.key() == Qt.Key.Key_Shift:
+                self.viewer._update_rubberband(shift_pressed=False)
+
+    def keyPressEvent(self, event):
+        if self.doc.is_loaded():
+
+            if event.key() == Qt.Key.Key_Shift and not event.isAutoRepeat():
+                self.viewer._update_rubberband(shift_pressed=True)
+
+            if event.key() == Qt.Key.Key_R:
+                self.viewer.select_mode = False
+                if self.viewer.annotation_mode:
+                    self.viewer.current_tool_index = (self.viewer.current_tool_index + 1) % len(self.viewer.annotation_tools)
+                else:
+                    self.viewer.annotation_mode = True
+                    self.viewer.current_tool_index = 0
+                self.viewer.pending_line = None
+                self.viewer.clear_selection()
+                return
+    
+            if event.key() == Qt.Key.Key_X:
+                self.viewer.annotation_mode = False
+                self.viewer.select_mode = not self.viewer.select_mode
+                self.viewer.pending_line = None
+                self.viewer.clear_selection()
+                return
+    
+            if event.key() == Qt.Key.Key_Escape:
+                if self.viewer.annotation_mode:
+                    if self.viewer.pending_line is not None:
+                        self.viewer.pending_line = None
+                        self.viewer._clear_rubberband()
+                        self.viewer.current_series_id = self.viewer._new_series_id()
+                        self.viewer.update_annotations()
+                    else:
+                        self.viewer.annotation_mode = False
+                elif self.viewer.select_mode:
+                    if self.viewer.selected_annotations:
+                        self.viewer.clear_selection()
+                    else:
+                        self.viewer.select_mode = False
+    
+            if event.key() == Qt.Key.Key_Delete:
+                if self.viewer.select_mode and self.viewer.selected_annotations:
+                    self.viewer.push_undo_state()
+                    layer = self.viewer._get_layer()
+                    removal_ids = {ann.uid for ann in self.viewer.selected_annotations}
+                    for ann in list(layer.get_annotations()):
+                        if ann.uid in removal_ids:
+                            layer.remove_annotation(ann)
+                    self.viewer.selected_annotations = []
+                    self.viewer.update_annotations()
+                    return
+    
+            if event.key() == Qt.Key.Key_C:
+                if self.viewer.select_mode and self.viewer.selected_annotations:
+                    self.viewer.push_undo_state()
+                    self.viewer._cycle_selected_subtype()
+                elif self.viewer.annotation_mode:
+                    self.viewer.current_subtype_index = (self.viewer.current_subtype_index + 1) % len(
+                        self.viewer.annotation_subtypes[self.viewer._current_tool()])
+                return
+    
+            if event.key() in (Qt.Key.Key_Plus, Qt.Key.Key_Equal):
+                self.viewer.adjust_annotation_thickness(increase=True)
+                return
+    
+            if event.key() == Qt.Key.Key_Minus:
+                self.viewer.adjust_annotation_thickness(increase=False)
+                return
+    
+            if event.key() == Qt.Key.Key_Z and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+                self.viewer.undo()
+                return
+
+            if event.key() == Qt.Key.Key_Q:
+                self.viewer.vb1.autoRange()
+                return
+
+            # --------------- Panning
+            if event.key() in (Qt.Key.Key_A, Qt.Key.Key_Left):
+                self.viewer.pan(dx=-1)
+                return
+            if event.key() in (Qt.Key.Key_D, Qt.Key.Key_Right):
+                self.viewer.pan(dx=1)
+                return
+            if event.key() in (Qt.Key.Key_W, Qt.Key.Key_Up):
+                self.viewer.pan(dy=1)
+                return
+            if event.key() in (Qt.Key.Key_S, Qt.Key.Key_Down):
+                self.viewer.pan(dy=-1)
+                return
