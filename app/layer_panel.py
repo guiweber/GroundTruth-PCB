@@ -259,6 +259,7 @@ class LayerPanel(QWidget):
             return
         self.selected_index = row
         self.doc.current_layer_index = row
+        self.doc.layers[row].visible = True
         self.layerChanged.emit(row)
         self.refresh_layers()
 
@@ -267,6 +268,7 @@ class LayerPanel(QWidget):
         index = max(0, min(index, len(self.doc.layers) - 1))
         self.selected_index = index
         self.doc.current_layer_index = index
+        self.doc.layers[index].visible = True
         self.layerChanged.emit(index)
         if not self.minimized:
             self.layer_list.setCurrentRow(index)

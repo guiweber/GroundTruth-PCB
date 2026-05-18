@@ -137,6 +137,7 @@ class MainWindow(QMainWindow):
         if self.doc.is_loaded():
             self.viewer.update_images()
             self.viewer.update_axes()
+            self.layer_panel.select_layer(0)
             self.stack.setCurrentWidget(self.content_widget)
             self.toolbar.setEnabled(True)
         else:
