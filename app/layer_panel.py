@@ -338,7 +338,8 @@ class LayerPanel(QWidget):
         self.layerChanged.emit(self.selected_index)
 
     def delete_layer(self):
-        if self.selected_index < 0:
+        # Delete the selected layer, but ensure at least one layer exists
+        if len(self.doc.layers) <= 1:
             return
         if not self.doc.layers[self.selected_index].is_empty():
             confirm = QMessageBox.question(
@@ -351,9 +352,11 @@ class LayerPanel(QWidget):
                 return
 
         self.doc.layers.pop(self.selected_index)
-        self.selected_index = max(-1, min(self.selected_index, len(self.doc.layers) - 1))
+        self.selected_index = min(self.selected_index, len(self.doc.layers) - 1)
         self.doc.current_layer_index = self.selected_index
         self.refresh_layers()
+        if len(self.doc.layers) <= 1:
+            self.delete_button.setEnabled(False)
         self.layerChanged.emit(self.selected_index)
 
     def add_layer(self):
@@ -365,6 +368,7 @@ class LayerPanel(QWidget):
         self.doc.current_layer_index = index
         self.refresh_layers()
         self.layerChanged.emit(index)
+        self.delete_button.setEnabled(True)
 
     def reorder_layers(self):
         if self.layer_list.count() == 0:
