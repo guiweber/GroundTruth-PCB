@@ -238,3 +238,11 @@ class MainWindow(QMainWindow):
             if event.key() in (Qt.Key.Key_S, Qt.Key.Key_Down):
                 self.viewer.pan(dy=-1)
                 return
+
+            # --------------- Layer selection
+            if event.key() == Qt.Key.Key_0:
+                self.layer_panel.select_layer(10)
+                return
+            if Qt.Key.Key_1 <= event.key() <= Qt.Key.Key_9:
+                self.layer_panel.select_layer(event.key() - Qt.Key.Key_1)
+                return
