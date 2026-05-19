@@ -216,7 +216,7 @@ class SyncViewer(QtWidgets.QWidget):
         # only the original start sides for the pending line.
         if shift_pressed is None:
             shift_pressed = bool(QtWidgets.QApplication.keyboardModifiers() & Qt.KeyboardModifier.ShiftModifier)
-        sides = [0, 1] if shift_pressed else self.pending_line["start_sides"]
+        sides = [0, 1] if shift_pressed else [self.pending_line["start_side"]]
 
         for side in sides:
             line = pg.PlotDataItem([start[0], current[0]], [start[1], current[1]], pen=rb_pen)
@@ -291,7 +291,7 @@ class SyncViewer(QtWidgets.QWidget):
             if self._distance(ann.end, anchor_point) < 1e-6:
                 ann.move_endpoint(1, dx, dy)
 
-    def _finish_line_segment(self, end_point: tuple[float, float], current_sides: list[int], next_sides: list[int], end_button):
+    def _finish_line_segment(self, end_point: tuple[float, float], current_sides: list[int], next_side: int, end_button):
         if not self.pending_line:
             return
         self.push_undo_state()
@@ -325,7 +325,7 @@ class SyncViewer(QtWidgets.QWidget):
         # next pending segment should remember which button originated it
         self.pending_line = {
             "start": end_point,
-            "start_sides": next_sides,
+            "start_side": next_side,
             "view_index": end_button,
             "start_button": end_button,
         }
@@ -369,13 +369,12 @@ class SyncViewer(QtWidgets.QWidget):
         if button not in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton):
             return False
 
-        side = 0 if button == Qt.MouseButton.LeftButton else 1
+        next_side = 0 if button == Qt.MouseButton.LeftButton else 1
         shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
-        sides = [0, 1] if shift else [side]
         view_point = self._scene_to_view(event.scenePos(), view_index)
 
         if self.select_mode:
-            annotation, hit_type = self._find_annotation_hit(side, view_point)
+            annotation, hit_type = self._find_annotation_hit(next_side, view_point)
             if annotation:
                 self.push_undo_state()
                 self._select_annotation(annotation)
@@ -394,15 +393,14 @@ class SyncViewer(QtWidgets.QWidget):
             if self.pending_line is None:
                 self.pending_line = {
                     "start": view_point,
-                    "start_sides": sides,
+                    "start_side": next_side,
                     "view_index": view_index,
                     "start_button": event.button(),
                 }
                 self._update_rubberband(event.scenePos(), shift)
             else:
-                current_sides = [0, 1] if shift else self.pending_line["start_sides"]
-                next_sides = [0, 1] if shift else [side]
-                self._finish_line_segment(view_point, current_sides, next_sides, event.button())
+                current_sides = [0, 1] if shift else [self.pending_line["start_side"]]
+                self._finish_line_segment(view_point, current_sides, next_side, event.button())
                 self._update_rubberband(event.scenePos(), shift)
             return True
 
