@@ -146,15 +146,20 @@ class MainWindow(QMainWindow):
 
     def keyReleaseEvent(self, event):
         if self.doc.is_loaded():
+
+            # --------------- Annotation Two-Side Mode Deactivation
             if event.key() == Qt.Key.Key_Shift:
                 self.viewer._update_rubberband(shift_pressed=False)
 
     def keyPressEvent(self, event):
         if self.doc.is_loaded():
 
+            # --------------- Annotation Two-Side Mode Activation
             if event.key() == Qt.Key.Key_Shift and not event.isAutoRepeat():
                 self.viewer._update_rubberband(shift_pressed=True)
+                return
 
+            # --------------- Annotation Mode & Tool Selection
             if event.key() == Qt.Key.Key_R:
                 self.viewer.select_mode = False
                 if self.viewer.annotation_mode:
@@ -165,14 +170,16 @@ class MainWindow(QMainWindow):
                 self.viewer.pending_line = None
                 self.viewer.clear_selection()
                 return
-    
+
+            # --------------- Select Mode
             if event.key() == Qt.Key.Key_X:
                 self.viewer.annotation_mode = False
                 self.viewer.select_mode = not self.viewer.select_mode
                 self.viewer.pending_line = None
                 self.viewer.clear_selection()
                 return
-    
+
+            # --------------- Clear Current Mode/Selection
             if event.key() == Qt.Key.Key_Escape:
                 if self.viewer.annotation_mode:
                     if self.viewer.pending_line is not None:
@@ -187,7 +194,9 @@ class MainWindow(QMainWindow):
                         self.viewer.clear_selection()
                     else:
                         self.viewer.select_mode = False
-    
+                return
+
+            # --------------- Delete
             if event.key() == Qt.Key.Key_Delete:
                 if self.viewer.select_mode and self.viewer.selected_annotations:
                     self.viewer.push_undo_state()
@@ -198,8 +207,9 @@ class MainWindow(QMainWindow):
                             layer.remove_annotation(ann)
                     self.viewer.selected_annotations = []
                     self.viewer.update_annotations()
-                    return
-    
+                return
+
+            # --------------- Annotation Subtype Cycling
             if event.key() == Qt.Key.Key_C:
                 if self.viewer.select_mode and self.viewer.selected_annotations:
                     self.viewer.push_undo_state()
@@ -208,19 +218,21 @@ class MainWindow(QMainWindow):
                     self.viewer.current_subtype_index = (self.viewer.current_subtype_index + 1) % len(
                         self.viewer.annotation_subtypes[self.viewer._current_tool()])
                 return
-    
+
+            # --------------- Annotation Thickness
             if event.key() in (Qt.Key.Key_Plus, Qt.Key.Key_Equal):
                 self.viewer.adjust_annotation_thickness(increase=True)
                 return
-    
             if event.key() == Qt.Key.Key_Minus:
                 self.viewer.adjust_annotation_thickness(increase=False)
                 return
-    
+
+            # --------------- Undo
             if event.key() == Qt.Key.Key_Z and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
                 self.viewer.undo()
                 return
 
+            # --------------- Reset View Range
             if event.key() == Qt.Key.Key_Q:
                 self.viewer.vb1.autoRange()
                 return
@@ -239,7 +251,7 @@ class MainWindow(QMainWindow):
                 self.viewer.pan(dy=-1)
                 return
 
-            # --------------- Layer selection
+            # --------------- Layer Selection
             if event.key() == Qt.Key.Key_0:
                 self.layer_panel.select_layer(10)
                 return
