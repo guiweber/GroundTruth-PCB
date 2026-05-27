@@ -453,12 +453,6 @@ class SyncViewer(QtWidgets.QWidget):
         self.vLine2.setPos(x)
         self.hLine2.setPos(y)
 
-
-    def flip(self, which, axis):
-        self.doc.flip(which, axis)
-        self.img_items[which].setImage(self.doc.images[which], autoLevels=False)
-        self.vb1.autoRange()
-
     def get_state(self):
         return self.vb1.viewRange(), self.vb1.getState()
 

@@ -41,6 +41,7 @@ class Document:
             self.load_files(paths)
 
     def clear(self):
+        self.loaded = False
         self.images: List[np.ndarray] = []
         self.current_layer_index = 0
         self.layers = []
@@ -61,11 +62,11 @@ class Document:
         self._gtd_path: Optional[Path] = None        
 
     def is_loaded(self) -> bool:
-        return len(self.images) >= 2
+        return self.loaded
 
     def load_files(self, paths: List[str]):
         """ Tries to load the files from the list. Returns a list containing any load errors."""
-        if self.is_loaded():
+        if len(self.images) > 1:
             return []
 
         resolved = []
@@ -85,11 +86,11 @@ class Document:
 
         errors = []
         for path in resolved:
+            if len(self.images) > 1:
+                break
             err = self.__load_image(path)
             if err is not None:
                 errors.append(err)
-            if self.is_loaded():
-                break
 
         return errors
 
@@ -149,6 +150,8 @@ class Document:
                 self.images = image_files
                 if layers_data is not None:
                     self.layers = layers_data
+
+                self.loaded = True
 
             return []
 

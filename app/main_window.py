@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
 )
 
 from app.sync_viewer import SyncViewer
-from app.drop_zone import DropZone
+from app.drop_zone import DropZone, ImgPreview
 from app.layer_panel import LayerPanel
 from core.document import Document
 from utils.errors import error_info
@@ -26,7 +26,7 @@ class MainWindow(QMainWindow):
 
         self.viewer = SyncViewer(self.doc)
         self.layer_panel = LayerPanel(self.doc, self.viewer)
-        self.drop_zone = DropZone()
+        self.drop_zone = DropZone(self.doc)
 
         self.stack = QStackedWidget()
 
@@ -50,10 +50,9 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.content_widget)
         self.setCentralWidget(self.stack)
 
-        # self.layer_panel.layerChanged.connect(self.viewer.select_layer)
-        self.layer_panel.panelMinimized.connect(self.on_layer_panel_minimized)
         self.drop_zone.filesDropped.connect(self.on_files_dropped)
-        self.drop_zone.clear_requested.connect(self.on_clear_requested)
+        self.drop_zone.imagesAccepted.connect(self.on_images_accepted)
+        self.layer_panel.panelMinimized.connect(self.on_layer_panel_minimized)
         self.layer_panel.layerChanged.connect(lambda _: self.viewer.update_annotations())
 
         self.make_toolbar()
@@ -66,14 +65,6 @@ class MainWindow(QMainWindow):
         self.addToolBar(self.toolbar)
 
         self.toolbar.addAction("Save", lambda: self.save())
-
-        self.toolbar.addAction("Flip L ↔", lambda: self.viewer.flip(0, "h"))
-        self.toolbar.addAction("Flip L ↕", lambda: self.viewer.flip(0, "v"))
-
-        self.toolbar.addSeparator()
-
-        self.toolbar.addAction("Flip R ↔", lambda: self.viewer.flip(1, "h"))
-        self.toolbar.addAction("Flip R ↕", lambda: self.viewer.flip(1, "v"))
 
         self.toolbar.addSeparator()
 
@@ -92,27 +83,30 @@ class MainWindow(QMainWindow):
     def on_layer_panel_minimized(self, minimized):
             # Preserve the viewboxes range
             range, state = self.viewer.get_state()
-            
+
             # Updates the splitter to match the panel's size
             sizes = self.splitter.sizes()
             sizes[0] = 0
             self.splitter.setSizes(sizes)
-            
+
             # Restore the viewboxes range
             self.viewer.set_state(range, state)
-            
-
-    def on_clear_requested(self):
-        if len(self.doc.images) == 1:
-            self.doc.clear()
-            self.drop_zone.clear_preview()
-            self.update_ui_state()
 
     def on_files_dropped(self, paths):
+        if len(self.drop_zone.previews) >= 2:
+            return
+
         load_errors = self.doc.load_files(paths)
 
-        if len(self.doc.images) == 1:
-            self.drop_zone.set_preview_image(self.doc.images[0])
+        if not self.doc.is_loaded():
+            n_load =  len(self.doc.images)-len(self.drop_zone.previews)
+            for i in range(n_load):
+                self.drop_zone.set_preview_image()
+
+            if len(self.drop_zone.previews) > 1:
+                self.drop_zone.continue_btn.setVisible(True)
+                self.drop_zone.previews[0].update_image(highlight_sides=True)
+                self.drop_zone.previews[1].update_image(highlight_sides=True)
 
         self.update_ui_state()
 
@@ -121,6 +115,15 @@ class MainWindow(QMainWindow):
             load_errors = load_errors[:3]
         for e in load_errors:
             error_info("File loading error", e)
+
+    def on_images_accepted(self):
+        self.doc.loaded = True
+        self.update_ui_state()
+
+    def clear(self, index:int):
+        self.doc.clear()
+        self.drop_zone.clear_preview()
+        self.update_ui_state()
 
     def save(self):
         if self.doc.saved_gtd:
