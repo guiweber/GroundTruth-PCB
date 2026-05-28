@@ -229,7 +229,7 @@ class Document:
 
 class Layer:
 
-    def __init__(self, name: str, color: str, visible: bool = True, alpha: float = 0.3):
+    def __init__(self, name: str, color: str, visible: bool = True, alpha: float = 0.8):
         self.uid = str(uuid.uuid4())
         self.name = name
         self.color = color

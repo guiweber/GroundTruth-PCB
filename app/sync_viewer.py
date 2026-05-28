@@ -125,8 +125,21 @@ class SyncViewer(QtWidgets.QWidget):
         point = viewbox.mapSceneToView(pos)
         return (point.x(), point.y())
 
-    def _clear_graphics(self):
-        for side_map in self.annotation_graphics.values():
+    def _clear_graphics(self, layer_index=None):
+        # Removes the annotations of one or all layers from view
+        items = []
+        if layer_index is None:
+            for side_map in self.annotation_graphics.values():
+                items.append(side_map)
+            self.annotation_graphics.clear()
+        else:
+            for ann in self.doc.layers[layer_index].get_annotations():
+                # Pop safely in case the annotations were already invisible
+                side_map = self.annotation_graphics.pop(ann.uid, None)
+                if side_map is not None:
+                    items.append(side_map)
+
+        for side_map in items:
             for side, items in side_map.items():
                 target_vb = self.vb1 if side == 0 else self.vb2
                 for item in items:
@@ -139,7 +152,6 @@ class SyncViewer(QtWidgets.QWidget):
                         self.glw.scene().removeItem(item)
                     except Exception:
                         pass
-        self.annotation_graphics.clear()
 
     def _clear_rubberband(self):
         for item, side in self.rubberband_items:
@@ -156,17 +168,20 @@ class SyncViewer(QtWidgets.QWidget):
             view_index = fallback_view_index
         return self._scene_to_view(pos, view_index)
 
-    def _draw_annotation(self, annotation: LineAnnotation, side: int, color: str, selected: bool = False):
+    def _draw_annotation(self, annotation: LineAnnotation, side: int, color: str, alpha: float = 1.0, selected: bool = False):
         qcolor = QColor(color)
+        qcolor.setAlphaF(alpha)
+
         if selected:
             # Use inverted color for selected annotations (solid)
-            qcolor = QColor(255 - qcolor.red(), 255 - qcolor.green(), 255 - qcolor.blue())
+            qcolor = QColor(255 - qcolor.red(), 255 - qcolor.green(), 255 - qcolor.blue(), qcolor.alpha())
 
         items = annotation.draw(side, qcolor)
 
         if items:
             target_vb = self.vb1 if side == 0 else self.vb2
-            [target_vb.addItem(item) for item in items]
+            for item in items:
+                target_vb.addItem(item)
 
         self.annotation_graphics.setdefault(annotation.uid, {})[side] = items
 
@@ -183,14 +198,21 @@ class SyncViewer(QtWidgets.QWidget):
         self.pending_line = None
         self.update_annotations()
 
-    def update_annotations(self):
-        self._clear_graphics()
-        for layer in self.doc.layers:
+    def update_annotations(self, layer_index=None):
+        if layer_index is None:
+            self._clear_graphics()
+            layers_to_draw = list(enumerate(self.doc.layers))
+        else:
+            self._clear_graphics(layer_index)
+            layers_to_draw = [(layer_index, self.doc.layers[layer_index])]
+
+        for _idx, layer in layers_to_draw:
             if not layer.visible:
                 continue
             for annotation in layer.get_annotations():
                 for side in getattr(annotation, "sides", []):
-                    self._draw_annotation(annotation, side, layer.color, selected=annotation.selected)
+                    self._draw_annotation(annotation, side, layer.color, layer.alpha, selected=annotation.selected)
+
         self._update_rubberband()
 
     def _update_rubberband(self, cursor_scene_pos: QPointF = None, shift_pressed=None):
@@ -206,8 +228,13 @@ class SyncViewer(QtWidgets.QWidget):
                 return
         start = self.pending_line["start"]
         current = self._scene_to_world(cursor_scene_pos, self.pending_line["view_index"])
-        # rubberband uses dashed line with larger gaps to match annotation dashes
-        rb_pen = QPen(QColor(self._get_layer().color))
+
+        # Use the current layer color and apply its alpha
+        layer = self._get_layer()
+        qcolor = QColor(layer.color)
+        qcolor.setAlphaF(layer.alpha)
+
+        rb_pen = QPen(qcolor)
         rb_pen.setWidth(max(self.annotation_thickness, 1))
         rb_pen.setStyle(Qt.PenStyle.CustomDashLine)
         rb_pen.setDashPattern([10.0, 6.0])

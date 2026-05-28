@@ -53,7 +53,7 @@ class MainWindow(QMainWindow):
         self.drop_zone.filesDropped.connect(self.on_files_dropped)
         self.drop_zone.imagesAccepted.connect(self.on_images_accepted)
         self.layer_panel.panelMinimized.connect(self.on_layer_panel_minimized)
-        self.layer_panel.layerChanged.connect(lambda _: self.viewer.update_annotations())
+        self.layer_panel.layerChanged.connect(lambda idx: self.viewer.update_annotations(idx))
 
         self.make_toolbar()
         self.update_ui_state()

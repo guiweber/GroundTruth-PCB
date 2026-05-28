@@ -169,9 +169,9 @@ class LayerPanel(QWidget):
         properties_layout.addWidget(self.hex_edit)
 
         self.alpha_slider = QSlider(Qt.Orientation.Horizontal)
-        self.alpha_slider.setRange(0, 100)
+        self.alpha_slider.setRange(25, 100)
         self.alpha_slider.valueChanged.connect(self.change_alpha)
-        properties_layout.addWidget(QLabel("Transparency"))
+        properties_layout.addWidget(QLabel("Opacity"))
         properties_layout.addWidget(self.alpha_slider)
 
         self.delete_button = QPushButton("Delete layer")
