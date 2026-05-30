@@ -1,9 +1,20 @@
 from PyQt6 import QtWidgets, QtGui, QtCore
+from PyQt6.QtGui import QPainter, QColor, QLinearGradient
+from PyQt6.QtCore import (
+    pyqtProperty,
+    QPropertyAnimation,
+    QSequentialAnimationGroup,
+    QEasingCurve,
+    QRect,
+    QPointF
+)
+
 import numpy as np
 
 LABELS = ["Drop two images\nor a .gtd document here",
           "One image loaded\nDrop another image to continue",
-          "⚠️ Ensure the RED and BLUE sides correspond to the same physical side of the PCB ⚠️",]
+          "⚠️ Ensure the <span style='color: orange;'>ORANGE</span> and <span style='color:#87CEFA;'>BLUE</span> "
+          "sides correspond to the same physical side of the PCB ⚠️",]
 
 class DropZone(QtWidgets.QWidget):
     filesDropped = QtCore.pyqtSignal(list)
@@ -73,6 +84,11 @@ class DropZone(QtWidgets.QWidget):
         layout_index = self.preview_layout.count() - 1  # before last stretch
         self.preview_layout.insertWidget(layout_index, preview)
         self.label.setText(LABELS[len(self.previews)])
+
+        if len(self.previews) > 1:
+            self.continue_btn.setVisible(True)
+            self.enable_glow()
+
         self.update()
 
     def clear_preview(self, index: int):
@@ -86,7 +102,7 @@ class DropZone(QtWidgets.QWidget):
         self.update()
         for i, preview in enumerate(self.previews):
             preview.preview_index = i
-            preview.update_image(highlight_sides=False)
+            preview.enable_glow(False)
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
@@ -100,6 +116,10 @@ class DropZone(QtWidgets.QWidget):
         paths = [u.toLocalFile() for u in urls if u.isLocalFile()]
         if paths:
             self.filesDropped.emit(paths)
+
+    def enable_glow(self):
+        for p in self.previews:
+            p.enable_glow(True)
 
 
 class ImgPreview(QtWidgets.QFrame):
@@ -143,7 +163,7 @@ class ImgPreview(QtWidgets.QFrame):
         self.layout.addWidget(btn_row)
 
         # -------- Image
-        self.image_label = QtWidgets.QLabel()
+        self.image_label = GlowLabel()
         self.image_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.image_label.setFixedSize(512, 512)
 
@@ -166,39 +186,18 @@ class ImgPreview(QtWidgets.QFrame):
         self.clear_btn.move(self.width() - self.clear_btn.width() - m, m)
         self.update_image()
 
-    def update_image(self, highlight_sides=False):
+    def update_image(self):
         image_array = self.doc.images[self.preview_index]
         h, w, _ = image_array.shape
-        img_data = bytearray(np.flipud(image_array).tobytes())
-        if highlight_sides:
-            self.highlight_sides(img_data, w, h)
+        img_data = np.flipud(image_array).tobytes()
         qimg = QtGui.QImage(img_data, w, h, 3 * w, QtGui.QImage.Format.Format_RGB888,)
         pix = QtGui.QPixmap.fromImage(qimg)
         pix = pix.scaled(
-            self.image_label.size(),
+            self.image_label.content_size(),
             QtCore.Qt.AspectRatioMode.KeepAspectRatio,
             QtCore.Qt.TransformationMode.SmoothTransformation,
         )
         self.image_label.setPixmap(pix)
-
-    def highlight_sides(self, img_data, w, h):
-
-        thickness = max(1, int(0.02 * min(w, h)))
-        stride = 3 * w
-        for y in range(h):
-            for x in range(thickness):
-                i = y * stride + x * 3
-                img_data[i + 0] = 50  # R
-                img_data[i + 1] = 50  # G
-                img_data[i + 2] = 255  # B
-
-        for y in range(thickness):
-            row_start = y * stride
-            for x in range(w):
-                i = row_start + x * 3
-                img_data[i + 0] = 255  # R
-                img_data[i + 1] = 0
-                img_data[i + 2] = 0
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -211,5 +210,86 @@ class ImgPreview(QtWidgets.QFrame):
 
     def flip(self, axis):
         self.doc.flip(self.preview_index, axis)
-        highlight = True if len(self.doc.images) > 1 else False
-        self.update_image(highlight_sides=highlight)
+        self.update_image()
+
+    def enable_glow(self, enable=True):
+        self.image_label.glow_enabled = enable
+
+
+class GlowLabel(QtWidgets.QLabel):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self._glow_size = 16 # Size of the glow in pixels
+        self._glow = 0.3 # Pulse strength animation variable
+        self.glow_enabled = False
+
+        # Breathing pulse effect
+        self._grow = QPropertyAnimation(self, b"glow")
+        self._grow.setStartValue(0.2)
+        self._grow.setEndValue(1.0)
+        self._grow.setDuration(900)
+        self._grow.setEasingCurve(QEasingCurve.Type.InOutSine)
+
+        self._shrink = QPropertyAnimation(self, b"glow")
+        self._shrink.setStartValue(1.0)
+        self._shrink.setEndValue(0.2)
+        self._shrink.setDuration(900)
+        self._shrink.setEasingCurve(QEasingCurve.Type.InOutSine)
+
+        self._pulse = QSequentialAnimationGroup(self)
+        self._pulse.addAnimation(self._grow)
+        self._pulse.addAnimation(self._shrink)
+        self._pulse.setLoopCount(-1)
+        self._pulse.start()
+
+    def get_glow(self):
+        return self._glow
+
+    def set_glow(self, value):
+        self._glow = value
+        self.update()
+
+    glow = pyqtProperty(float, get_glow, set_glow)
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+
+        if not self.glow_enabled:
+            return
+
+        pm = self.pixmap()
+        if pm is None:
+            return
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        rect = self.contentsRect()
+        x = rect.x() + (rect.width() - pm.width()) // 2
+        y = rect.y() + (rect.height() - pm.height()) // 2
+
+        alpha = int(40 + 180 * self._glow)
+
+        # Left blue glow
+        left_rect = QRect(x - self._glow_size, y, self._glow_size, pm.height())
+
+        blue = QLinearGradient(QPointF(left_rect.topLeft()), QPointF(left_rect.topRight()))
+        blue.setColorAt(0.0, QColor(80, 170, 255, 0)) # Near pixmap
+        blue.setColorAt(1.0, QColor(80, 170, 255, alpha))
+
+        painter.fillRect(left_rect, blue)
+
+        # Top orange glow
+        top_rect = QRect(x, y - self._glow_size, pm.width(), self._glow_size)
+
+        orange = QLinearGradient(QPointF(top_rect.topLeft()), QPointF(top_rect.bottomLeft()))
+        orange.setColorAt(0.0, QColor(255, 140, 60, 0)) # Near pixmap
+        orange.setColorAt(1.0, QColor(255, 140, 60, alpha))
+
+        painter.fillRect(top_rect, orange)
+
+    def content_size(self):
+        # Returns the size images should be scaled to for accommodating the glow effect
+        # We need to reserve twice the glow size since the image is centered
+        return self.size() - QtCore.QSize(int(self._glow_size * 2), int(self._glow_size * 2),)

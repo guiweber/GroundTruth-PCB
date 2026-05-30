@@ -103,11 +103,6 @@ class MainWindow(QMainWindow):
             for i in range(n_load):
                 self.drop_zone.set_preview_image()
 
-            if len(self.drop_zone.previews) > 1:
-                self.drop_zone.continue_btn.setVisible(True)
-                self.drop_zone.previews[0].update_image(highlight_sides=True)
-                self.drop_zone.previews[1].update_image(highlight_sides=True)
-
         self.update_ui_state()
 
         # Only display errors after UI update in case some files were successful
