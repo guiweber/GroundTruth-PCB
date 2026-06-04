@@ -3,7 +3,7 @@ from PyQt6.QtCore import Qt, QEvent, QPointF
 from PyQt6.QtGui import QPen, QColor
 import pyqtgraph as pg
 
-from core.annotations import LineAnnotation
+from core.annotations import Annotation, LineAnnotation
 
 import copy
 import math
@@ -168,7 +168,7 @@ class SyncViewer(QtWidgets.QWidget):
             view_index = fallback_view_index
         return self._scene_to_view(pos, view_index)
 
-    def _draw_annotation(self, annotation: LineAnnotation, side: int, color: str, alpha: float = 1.0, selected: bool = False):
+    def _draw_annotation(self, annotation: Annotation, side: int, color: str, alpha: float = 1.0, selected: bool = False):
         qcolor = QColor(color)
         qcolor.setAlphaF(alpha)
 
@@ -276,7 +276,7 @@ class SyncViewer(QtWidgets.QWidget):
                 best_hit = "move"
         return best, best_hit
 
-    def _select_annotation(self, annotation: LineAnnotation):
+    def _select_annotation(self, annotation: Annotation):
         if not annotation:
             return
         layer = self._get_layer()
