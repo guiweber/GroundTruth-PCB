@@ -199,7 +199,7 @@ class SyncViewer(QtWidgets.QWidget):
         self.update_annotations()
 
     def update_annotations(self, layer_index=None):
-        if layer_index is None:
+        if layer_index is None or layer_index == -1:
             self._clear_graphics()
             layers_to_draw = list(enumerate(self.doc.layers))
         else:

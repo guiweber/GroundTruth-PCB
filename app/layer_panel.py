@@ -294,7 +294,7 @@ class LayerPanel(QWidget):
         for layer in self.doc.layers:
             layer.visible = new_state
         self.refresh_layers()
-        self.layerChanged.emit(self.selected_index)
+        self.layerChanged.emit(-1)
 
     def rename_layer(self):
         if self.selected_index < 0:
@@ -360,7 +360,7 @@ class LayerPanel(QWidget):
         self.refresh_layers()
         if len(self.doc.layers) <= 1:
             self.delete_button.setEnabled(False)
-        self.layerChanged.emit(self.selected_index)
+        self.layerChanged.emit(-1)
 
     def add_layer(self):
 
@@ -387,7 +387,7 @@ class LayerPanel(QWidget):
         self.selected_index = max(0, min(self.selected_index, len(self.doc.layers) - 1))
         self.doc.current_layer_index = self.selected_index
         self.refresh_layers()
-        self.layerChanged.emit(self.selected_index)
+        self.layerChanged.emit(-1)
 
     def update_property_panel(self):
         if self.selected_index < 0 or self.selected_index >= len(self.doc.layers):
