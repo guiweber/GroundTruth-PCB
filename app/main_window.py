@@ -65,16 +65,13 @@ class MainWindow(QMainWindow):
         self.addToolBar(self.toolbar)
 
         self.toolbar.addAction("Save", lambda: self.save())
-
         self.toolbar.addSeparator()
 
-        self.toolbar.addAction("Rotate 90°", self.viewer.rotate)
-
-        self.toolbar.addSeparator()
+        #self.toolbar.addAction("Rotate 90°", self.viewer.rotate)
+        #self.toolbar.addSeparator()
 
         self.toolbar.addAction("Invert X L", lambda: self.viewer.invert(0, "x"))
         self.toolbar.addAction("Invert Y L", lambda: self.viewer.invert(0, "y"))
-
         self.toolbar.addSeparator()
 
         self.toolbar.addAction("Invert X R", lambda: self.viewer.invert(1, "x"))
