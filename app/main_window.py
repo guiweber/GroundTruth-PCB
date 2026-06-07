@@ -1,7 +1,8 @@
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QStandardPaths
 from PyQt6.QtWidgets import (
     QMainWindow,
     QToolBar,
+    QSizePolicy,
     QStackedWidget,
     QFileDialog,
     QWidget,
@@ -9,18 +10,24 @@ from PyQt6.QtWidgets import (
     QSplitter,
 )
 
+from pathlib import Path
+import json
+
 from app.sync_viewer import SyncViewer
-from app.drop_zone import DropZone, ImgPreview
+from app.drop_zone import DropZone
 from app.layer_panel import LayerPanel
 from core.document import Document
 from utils.errors import error_info
+from utils.info import HelpInfo
 
 
 class MainWindow(QMainWindow):
     def __init__(self, cli_arguments):
         super().__init__()
 
-        self.setWindowTitle("GroundTruth - PCB Analysis")
+        app_name = "GroundTruth - PCB Analysis"
+        self.setWindowTitle(app_name)
+        self.state = AppState(app_name)
 
         self.doc = Document(cli_arguments)
 
@@ -77,6 +84,14 @@ class MainWindow(QMainWindow):
 
         self.toolbar.addAction("Invert X R", lambda: self.viewer.invert(1, "x"))
         self.toolbar.addAction("Invert Y R", lambda: self.viewer.invert(1, "y"))
+        # self.toolbar.addSeparator()
+
+        spacer = QWidget(self.toolbar)
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding,
+                             QSizePolicy.Policy.Expanding)
+        self.toolbar.addWidget(spacer)
+
+        self.toolbar.addAction("Help!", self.show_help)
 
     def on_layer_changed(self, index):
         self.viewer.clear_selection()
@@ -133,8 +148,14 @@ class MainWindow(QMainWindow):
         if path:
             self.doc.save(path)
 
+    def show_help(self):
+        HelpInfo(self).exec()
+
     def update_ui_state(self):
         if self.doc.is_loaded():
+            if self.state["first_run"]:
+                self.state["first_run"] = False
+                self.show_help()
             self.viewer.update_images()
             self.viewer.update_axes()
             self.layer_panel.select_layer(0)
@@ -269,3 +290,44 @@ class MainWindow(QMainWindow):
             if Qt.Key.Key_1 <= event.key() <= Qt.Key.Key_9:
                 self.layer_panel.select_layer(event.key() - Qt.Key.Key_1)
                 return
+
+class AppState:
+    def __init__(self, app_name: str):
+        config_dir = QStandardPaths.writableLocation(
+            QStandardPaths.StandardLocation.AppConfigLocation
+        )
+
+        self.state_dir = Path(config_dir) / app_name
+        self.state_file = self.state_dir / "state.json"
+        self.load()
+
+    def load(self):
+        if self.state_file.exists():
+            try:
+                self._state = json.loads(self.state_file.read_text(encoding="utf-8"))
+            except Exception:
+                self._set_default_state()
+        else:
+            self._set_default_state()
+        self.save()
+
+    def save(self):
+        self.state_dir.mkdir(parents=True, exist_ok=True)
+        self.state_file.write_text(json.dumps(self._state, indent=2), encoding="utf-8")
+
+    def _set_default_state(self):
+        self._state = {"first_file_load": True,
+                       "first_run": True}
+
+    def __getitem__(self, key):
+        return self._state[key]
+
+    def __setitem__(self, key, value):
+        self._state[key] = value
+        self.save()
+
+    def __contains__(self, key):
+        return key in self._state
+
+    def get(self, key, default=None):
+        return self._state.get(key, default)
