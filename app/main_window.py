@@ -59,6 +59,7 @@ class MainWindow(QMainWindow):
         self.update_ui_state()
 
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setFocus()
 
     def make_toolbar(self):
         self.toolbar = QToolBar("Adjustments")

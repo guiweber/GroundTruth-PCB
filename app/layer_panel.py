@@ -262,7 +262,6 @@ class LayerPanel(QWidget):
         self.doc.layers[row].visible = True
         self.layerChanged.emit(row)
         self.refresh_layers()
-        self.setFocus()
 
     def select_layer(self, index: int):
         """ Select layer by index, used by collapsed buttons """

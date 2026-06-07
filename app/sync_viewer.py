@@ -13,7 +13,7 @@ class SyncViewer(QtWidgets.QWidget):
     def __init__(self, document):
         super().__init__()
 
-        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        #self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         self.doc = document
 
@@ -41,6 +41,10 @@ class SyncViewer(QtWidgets.QWidget):
 
         self.vb1 = self.glw.addViewBox(row=0, col=0)
         self.vb2 = self.glw.addViewBox(row=0, col=1)
+
+        self.glw.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.vb1.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.vb2.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         self.vb1.setDefaultPadding(0)
         self.vb2.setDefaultPadding(0)
