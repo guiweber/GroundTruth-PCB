@@ -19,7 +19,7 @@ class SyncViewer(QtWidgets.QWidget):
 
         # Annotation state
         self.annotation_tools = ["line"]
-        self.annotation_subtypes = {"line": ["line", "arrow_left", "arrow_right"]}
+        self.annotation_subtypes = {"line": ["line", "arrow_forward"]}
         self.current_tool_index = 0
         self.current_subtype_index = 0
         self.annotation_thickness = 16

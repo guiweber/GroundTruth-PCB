@@ -176,7 +176,7 @@ class MainWindow(QMainWindow):
                 return
 
             # --------------- Annotation Mode & Tool Cycling
-            if event.key() == Qt.Key.Key_R:
+            if event.key() == Qt.Key.Key_F:
                 self.viewer.select_mode = False
                 if self.viewer.annotation_mode:
                     self.viewer.current_tool_index = (self.viewer.current_tool_index + 1) % len(self.viewer.annotation_tools)
