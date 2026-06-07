@@ -1,6 +1,8 @@
 import io
 import json
 import pickle
+import shutil
+import tempfile
 import uuid
 import zipfile
 from pathlib import Path
@@ -59,7 +61,7 @@ class Document:
             "axis_inverted": ({"x": False, "y": False}, {"x": False, "y": False}),
         }
         self.saved_gtd = False
-        self._gtd_path: Optional[Path] = None        
+        self._gtd_path: Optional[Path] = None
 
     def is_loaded(self) -> bool:
         return self.loaded
@@ -130,7 +132,7 @@ class Document:
                         return [f"Unable to read layer informatoin from file: \n{e}"]
 
                 image_files = sorted(
-                    [f for f in zf.namelist() if f.startswith("image_") and f.endswith(".png")]
+                    [f for f in zf.namelist() if f.startswith("image_") and f.endswith(".jpg")]
                 )
 
                 for i, image_file in enumerate(image_files):
@@ -175,49 +177,55 @@ class Document:
         color = self.DEFAULT_LAYER_COLORS[len(self.layers) % len(self.DEFAULT_LAYER_COLORS)]
         self.layers.append(Layer(name=f"Layer {len(self.layers) + 1}", color=color))
 
-    def save(self, path: Optional[str] = None):
-        if path is None:
-            path = self._gtd_path
-        elif path and type(path) is str:
-            path = Path(path).with_suffix(DOCUMENT_EXT)
+    def save(self, target_path: Optional[str] = None):
+        updating = target_path is None
+
+        if updating:
+            target_path = Path(self._gtd_path).with_suffix(DOCUMENT_EXT)
+            if not target_path.exists():
+                error_info("Save error", "No existing file to update.")
+                return
+        elif isinstance(target_path, str):
+            target_path = Path(target_path).with_suffix(DOCUMENT_EXT)
         else:
             error_info("Save error", "No save path specified.")
             return
 
+        # To avoid always re-encoding images, copy existing images to a temp file on update
         try:
-            with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
+                tmp_path = Path(tmp.name)
 
-                # ---------------- metadata & config ----------------
-                zf.writestr(
-                    "metadata.json",
-                    json.dumps(self.metadata, indent=2)
-                )
+            with zipfile.ZipFile(tmp_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
 
-                zf.writestr(
-                    "config.json",
-                    json.dumps(self.config, indent=2)
-                )
+                # ---------- metadata & config ----------
+                zf.writestr("metadata.json", json.dumps(self.metadata, indent=2))
+                zf.writestr("config.json", json.dumps(self.config, indent=2))
+                zf.writestr("layers.pkl", pickle.dumps(self.layers))
 
-                zf.writestr(
-                    "layers.pkl",
-                    pickle.dumps(self.layers)
-                )
+                # ---------- images ----------
+                if updating:
+                    with zipfile.ZipFile(target_path, "r") as src:
+                        for item in src.infolist():
+                            if item.filename.startswith("image_") and item.filename.endswith(".jpg"):
+                                zf.writestr(item, src.read(item.filename))
+                else:
+                    for i, img in enumerate(self.images):
+                        pil_img = Image.fromarray(img, mode="RGB")
+                        buf = io.BytesIO()
+                        pil_img.save(buf, format="JPEG", quality=95, subsampling=0, optimize=True)
+                        zf.writestr(f"image_{i}.jpg", buf.getvalue())
 
-                # ---------------- images ----------------
-                for i, img in enumerate(self.images):
-                    pil_img = Image.fromarray(img, mode="RGB")
+            shutil.move(tmp_path, target_path)
 
-                    buf = io.BytesIO()
-                    pil_img.save(buf, format="PNG", compress_level=4) # Compression levels 0-9, Max == 9
-                    buf.seek(0)
-
-                    zf.writestr(f"image_{i}.png", buf.read())
-
-            self._gtd_path = path
+            self._gtd_path = target_path
             self.saved_gtd = True
 
         except Exception as e:
             error_info("Save error", str(e))
+        finally:
+            if tmp_path.exists():
+                tmp_path.unlink(missing_ok=True)
 
     def flip(self, which, axis):
         self.images[which] = np.fliplr(self.images[which]) if axis == "h" else np.flipud(self.images[which])
