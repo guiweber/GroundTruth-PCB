@@ -290,10 +290,9 @@ class SyncViewer(QtWidgets.QWidget):
         self.update_annotations()
 
     def clear_selection(self):
+        for ann in self.selected_annotations:
+            ann.selected = False
         self.selected_annotations = []
-        for layer in self.doc.layers:
-            for ann in layer.get_annotations():
-                ann.selected = False
         self.update_annotations()
 
     def _cycle_selected_subtype(self):
