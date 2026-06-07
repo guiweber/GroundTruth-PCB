@@ -50,6 +50,8 @@ Behavior:
 | `X` | Toggle selection mode |
 
 Behavior:
+- When activated, annotations can be selected by clicking on them
+- Selected annotations can be edited in various ways
 - Disables annotation mode
 - Clears pending drawing state
 - Toggles selection mode on/off
@@ -112,7 +114,7 @@ Behavior:
 
 Behavior:
 - Only the first 10 layers are selectable with the number keys
-- Any pending action will be canceled when changing layer
+- Any selected annotation will be unselected when changing layer
 
 ---
 
