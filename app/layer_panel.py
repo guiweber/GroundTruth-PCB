@@ -144,7 +144,7 @@ class LayerPanel(QWidget):
         expanded_layout.setSpacing(6)
 
         self.layer_list = LayerListWidget()
-        self.layer_list.currentRowChanged.connect(self.on_selection_changed)
+        self.layer_list.currentRowChanged.connect(self.select_layer)
         self.layer_list.orderChanged.connect(self.reorder_layers)
         expanded_layout.addWidget(self.layer_list)
 
@@ -253,20 +253,11 @@ class LayerPanel(QWidget):
             self.layer_list.setCurrentRow(self.selected_index)
         self.update_property_panel()
 
-    def on_selection_changed(self, row: int):
-        """" Select layer by clicking on the list, used by expanded list """
-        # This event fires twice per click, once with -1. Ignore the -1.
-        if row < 0 or row == self.selected_index:
-            return
-        self.selected_index = row
-        self.doc.current_layer_index = row
-        self.doc.layers[row].visible = True
-        self.layerChanged.emit(row)
-        self.refresh_layers()
-
     def select_layer(self, index: int):
         """ Select layer by index, used by collapsed buttons """
-        if index == self.selected_index:
+        # This event fires twice per list click, once with -1. Ignore the -1.
+        # Out of bound values can also be received via 0-9 keypresses, so filter them out.
+        if index < 0 or index == self.selected_index or index >= len(self.doc.layers):
             return
         self.selected_index = index
         self.doc.current_layer_index = index

@@ -285,7 +285,7 @@ class MainWindow(QMainWindow):
 
             # --------------- Layer Selection
             if event.key() == Qt.Key.Key_0:
-                self.layer_panel.select_layer(10)
+                self.layer_panel.select_layer(9)
                 return
             if Qt.Key.Key_1 <= event.key() <= Qt.Key.Key_9:
                 self.layer_panel.select_layer(event.key() - Qt.Key.Key_1)
