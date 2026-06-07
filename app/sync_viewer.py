@@ -235,12 +235,11 @@ class SyncViewer(QtWidgets.QWidget):
         qcolor.setAlphaF(layer.alpha)
 
         rb_pen = QPen(qcolor)
-        rb_pen.setWidth(max(self.annotation_thickness, 1))
-        rb_pen.setStyle(Qt.PenStyle.CustomDashLine)
-        rb_pen.setDashPattern([10.0, 6.0])
+        rb_pen.setWidth(self.annotation_thickness)
+        rb_pen.setStyle(Qt.PenStyle.SolidLine)
 
-        # Respect real-time Shift state: if Shift is held show both sides, otherwise show
-        # only the original start sides for the pending line.
+        # If Shift is held show both sides,
+        # otherwise show only the original start side for the pending line.
         if shift_pressed is None:
             shift_pressed = bool(QtWidgets.QApplication.keyboardModifiers() & Qt.KeyboardModifier.ShiftModifier)
         sides = [0, 1] if shift_pressed else [self.pending_line["start_side"]]

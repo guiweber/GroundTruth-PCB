@@ -63,13 +63,11 @@ class LineAnnotation(Annotation):
 
         # Determine whether this side should be dashed (selection no longer uses dashes)
         side_style = getattr(self, "side_styles", {}).get(side, "solid")
-        is_dashed = (side_style == "dashed")
 
         qp = QPen(qcolor)
         qp.setWidth(max(self.thickness, 1))
-        if is_dashed:
-            qp.setStyle(Qt.PenStyle.CustomDashLine)
-            qp.setDashPattern([10.0, 6.0])
+        if side_style == "dashed":
+            qp.setStyle(Qt.PenStyle.DashLine)
         else:
             qp.setStyle(Qt.PenStyle.SolidLine)
 
