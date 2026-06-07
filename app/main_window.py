@@ -53,7 +53,7 @@ class MainWindow(QMainWindow):
         self.drop_zone.filesDropped.connect(self.on_files_dropped)
         self.drop_zone.imagesAccepted.connect(self.on_images_accepted)
         self.layer_panel.panelMinimized.connect(self.on_layer_panel_minimized)
-        self.layer_panel.layerChanged.connect(lambda idx: self.viewer.update_annotations(idx))
+        self.layer_panel.layerChanged.connect(self.on_layer_changed)
 
         self.make_toolbar()
         self.update_ui_state()
@@ -77,6 +77,10 @@ class MainWindow(QMainWindow):
 
         self.toolbar.addAction("Invert X R", lambda: self.viewer.invert(1, "x"))
         self.toolbar.addAction("Invert Y R", lambda: self.viewer.invert(1, "y"))
+
+    def on_layer_changed(self, index):
+        self.viewer.clear_selection()
+        self.viewer.update_annotations(index)
 
     def on_layer_panel_minimized(self, minimized):
             # Preserve the viewboxes range

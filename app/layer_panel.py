@@ -255,6 +255,7 @@ class LayerPanel(QWidget):
 
     def on_selection_changed(self, row: int):
         """" Select layer by clicking on the list, used by expanded list """
+        # This event fires twice per click, once with -1. Ignore the -1.
         if row < 0 or row == self.selected_index:
             return
         self.selected_index = row
@@ -265,7 +266,8 @@ class LayerPanel(QWidget):
 
     def select_layer(self, index: int):
         """ Select layer by index, used by collapsed buttons """
-        index = max(0, min(index, len(self.doc.layers) - 1))
+        if index == self.selected_index:
+            return
         self.selected_index = index
         self.doc.current_layer_index = index
         self.doc.layers[index].visible = True
