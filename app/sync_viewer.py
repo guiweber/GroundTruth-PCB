@@ -517,10 +517,21 @@ class SyncViewer(QtWidgets.QWidget):
         self.vb2.invertX(self.doc.config["axis_inverted"][1]["x"])
         self.vb2.invertY(self.doc.config["axis_inverted"][1]["y"])
         
-    def adjust_annotation_thickness(self, increase=True):
-        if increase:
-            self.annotation_thickness = max(self.annotation_thickness + 1, int(self.annotation_thickness * 1.1))
+    def adjust_annotation_thickness(self, increase:bool):
+        # Changes the thickness of the annotation tool or of the selected annotation
+        if self.select_mode and self.selected_annotations:
+            self.push_undo_state()
+            for annotation in self.selected_annotations:
+                annotation.thickness = self._compute_annotation_thickness(annotation.thickness, increase)
+            self.update_annotations()
         else:
-            self.annotation_thickness = max(1, min(self.annotation_thickness - 1, int(self.annotation_thickness / 1.1)))
+            self.annotation_thickness = self._compute_annotation_thickness(self.annotation_thickness, increase)
+            self._update_rubberband()
 
-        self._update_rubberband()
+    def _compute_annotation_thickness(self, base_thickness, increase:bool):
+        # Computes the change in annotation thickness in pixels based on the current thickness
+        change_ratio = 1.1
+        if increase:
+            return max(base_thickness + 1, int(base_thickness * change_ratio))
+        else:
+            return max(1, min(base_thickness - 1, int(base_thickness / change_ratio)))
