@@ -158,6 +158,7 @@ class MainWindow(QMainWindow):
                 self.show_help()
             self.viewer.update_images()
             self.viewer.update_axes()
+            self.layer_panel.refresh_layers()
             self.layer_panel.select_layer(0)
             self.stack.setCurrentWidget(self.content_widget)
             self.toolbar.setEnabled(True)

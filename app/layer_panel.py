@@ -95,7 +95,7 @@ class LayerListWidget(QListWidget):
 
 
 class LayerPanel(QWidget):
-    layerChanged = pyqtSignal(int)
+    layerChanged = pyqtSignal(int)  # Pass the index of the changed layer or -1 for all layers
     panelMinimized = pyqtSignal(bool)
 
     def __init__(self, document, parent=None):
@@ -326,11 +326,12 @@ class LayerPanel(QWidget):
         self.layerChanged.emit(self.selected_index)
 
     def change_alpha(self, value: int):
-        if self.selected_index < 0:
+        if self.selected_index < 0 or self.selected_index >= len(self.doc.layers):
             return
         alpha = max(0.0, min(1.0, value / 100.0))
         self.doc.layers[self.selected_index].alpha = alpha
         self.layerChanged.emit(self.selected_index)
+
 
     def delete_layer(self):
         # Delete the selected layer, but ensure at least one layer exists
