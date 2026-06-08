@@ -21,6 +21,7 @@ class LayerItemWidget(QWidget):
 
     def __init__(self, uid: str, index: int, layer: dict):
         super().__init__()
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.uid = uid
         self.index = index
         self.layer = layer
@@ -77,6 +78,7 @@ class LayerListWidget(QListWidget):
 
     def __init__(self):
         super().__init__()
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setDragDropMode(QListWidget.DragDropMode.InternalMove)
         self.setDefaultDropAction(Qt.DropAction.MoveAction)
         self.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
@@ -94,6 +96,7 @@ class LayerPanel(QWidget):
 
     def __init__(self, document, parent=None):
         super().__init__(parent)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.doc = document
         self.selected_index = max(0, min(self.doc.current_layer_index, len(self.doc.layers) - 1))
         self.minimized = False
