@@ -317,11 +317,15 @@ class MainWindow(QMainWindow):
 
 class AppState:
     def __init__(self, app_name: str):
-        config_dir = QStandardPaths.writableLocation(
+        config_dir = Path(QStandardPaths.writableLocation(
             QStandardPaths.StandardLocation.AppConfigLocation
-        )
+        ))
 
-        self.state_dir = Path(config_dir) / app_name
+        # Depending on how the app is packaged/run, the folder might be main.py. In that case write to the parent.
+        if config_dir.name == "main.py":
+            config_dir = config_dir.parent
+
+        self.state_dir = config_dir / app_name
         self.state_file = self.state_dir / "state.json"
         self.load()
 
