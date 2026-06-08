@@ -26,9 +26,9 @@ class MainWindow(QMainWindow):
     def __init__(self, cli_arguments):
         super().__init__()
 
-        app_name = "GroundTruth - PCB Analysis"
-        self.setWindowTitle(app_name)
-        self.state = AppState(app_name)
+        self.app_name = "GroundTruth PCB Analysis"
+        self.setWindowTitle(self.app_name)
+        self.state = AppState(self.app_name)
 
         self.doc = Document(cli_arguments)
 
@@ -156,6 +156,7 @@ class MainWindow(QMainWindow):
             self.doc.save()
         else:
             self.save_as()
+            self.update_app_title()
 
     def save_as(self):
         path, _ = QFileDialog.getSaveFileName(self, "Save document", "", "GroundTruth Document (*.gtd)")
@@ -179,6 +180,14 @@ class MainWindow(QMainWindow):
         else:
             self.stack.setCurrentWidget(self.drop_zone)
             self.toolbar.setEnabled(False)
+
+        self.update_app_title()
+
+    def update_app_title(self):
+        if self.doc.saved_gtd:
+            self.setWindowTitle(f'{self.app_name} - {self.doc.get_file_name()}')
+        else:
+            self.setWindowTitle(self.app_name)
 
     def keyReleaseEvent(self, event):
         if self.doc.is_loaded():

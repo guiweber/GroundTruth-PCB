@@ -237,6 +237,9 @@ class Document:
     def get_current_layer(self):
         return self.layers[self.current_layer_index]
 
+    def get_file_name(self):
+        return self._gtd_path.name
+
 
 class Layer:
 
