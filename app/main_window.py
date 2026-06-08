@@ -95,7 +95,6 @@ class MainWindow(QMainWindow):
 
     def on_layer_changed(self, index):
         self.viewer.clear_selection()
-        self.viewer.update_annotations(index)
 
     def on_layer_panel_minimized(self, minimized):
             # Preserve the viewboxes range

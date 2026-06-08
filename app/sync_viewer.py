@@ -282,7 +282,7 @@ class SyncViewer(QtWidgets.QWidget):
         self.selected_annotations = [ann for ann in layer.get_annotations() if getattr(ann, "series_id", None) == group_id]
         for ann in layer.get_annotations():
             ann.selected = ann in self.selected_annotations
-        self.update_annotations()
+        self.update_annotations(self.doc.current_layer_index)
 
     def clear_selection(self):
         for ann in self.selected_annotations:
@@ -296,7 +296,7 @@ class SyncViewer(QtWidgets.QWidget):
         available = self.annotation_subtypes.get("line", [])
         for annotation in self.selected_annotations:
             annotation.cycle_subtype(available)
-        self.update_annotations()
+        self.update_annotations(self.doc.current_layer_index)
 
     def _apply_drag_to_selected(self, dx: float, dy: float, endpoint: str | None = None):
         if not self.selected_annotations:
@@ -344,7 +344,7 @@ class SyncViewer(QtWidgets.QWidget):
             side_styles=side_styles,
         )
         self.doc.get_current_layer().add_annotation(line)
-        self.update_annotations()
+        self.update_annotations(self.doc.current_layer_index)
 
         # next pending segment should remember which button originated it
         self.pending_line = {
@@ -445,7 +445,7 @@ class SyncViewer(QtWidgets.QWidget):
             else:
                 self._apply_drag_to_selected(dx, dy, endpoint=self.drag_action["handle"])
             self.drag_anchor = current
-            self.update_annotations()
+            self.update_annotations(self.doc.current_layer_index)
             return True
 
         if self.annotation_mode and self.pending_line is not None:
@@ -521,7 +521,7 @@ class SyncViewer(QtWidgets.QWidget):
             self.push_undo_state()
             for annotation in self.selected_annotations:
                 annotation.thickness = self._compute_annotation_thickness(annotation.thickness, increase)
-            self.update_annotations()
+            self.update_annotations(self.doc.current_layer_index)
         else:
             self.annotation_thickness = self._compute_annotation_thickness(self.annotation_thickness, increase)
             self._update_rubberband()
