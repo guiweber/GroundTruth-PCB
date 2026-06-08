@@ -200,12 +200,12 @@ class SyncViewer(QtWidgets.QWidget):
     def update_annotations(self, layer_index=None):
         if layer_index is None or layer_index == -1:
             self._clear_graphics()
-            layers_to_draw = list(enumerate(self.doc.layers))
+            layers_to_draw = [l for l in self.doc.layers if l is not self.doc.get_current_layer()] + [self.doc.get_current_layer()]
         else:
             self._clear_graphics(layer_index)
-            layers_to_draw = [(layer_index, self.doc.layers[layer_index])]
+            layers_to_draw = [self.doc.layers[layer_index]]
 
-        for _idx, layer in layers_to_draw:
+        for layer in layers_to_draw:
             if not layer.visible:
                 continue
             for annotation in layer.get_annotations():
