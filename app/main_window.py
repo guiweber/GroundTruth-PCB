@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (
     QWidget,
     QHBoxLayout,
     QSplitter,
+    QMessageBox,
 )
 
 from pathlib import Path
@@ -75,6 +76,9 @@ class MainWindow(QMainWindow):
         self.toolbar.addAction("Save", lambda: self.save())
         self.toolbar.addSeparator()
 
+        self.toolbar.addAction("New Document", lambda: self.clear())
+        self.toolbar.addSeparator()
+
         #self.toolbar.addAction("Rotate 90°", self.viewer.rotate)
         #self.toolbar.addSeparator()
 
@@ -131,10 +135,21 @@ class MainWindow(QMainWindow):
         self.doc.loaded = True
         self.update_ui_state()
 
-    def clear(self, index:int):
-        self.doc.clear()
-        self.drop_zone.clear_preview()
-        self.update_ui_state()
+    def clear(self):
+        reply = QMessageBox.question(
+            self,
+            "New Document Creation",
+            "All unsaved changes will be lost, proceed?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            # Important - Preserve this clearing order
+            self.drop_zone.clear_previews()
+            self.doc.clear()
+            self.viewer.clear_graphics()
+            self.viewer.init_variables()
+            self.update_ui_state()
 
     def save(self):
         if self.doc.saved_gtd:

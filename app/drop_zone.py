@@ -104,6 +104,10 @@ class DropZone(QtWidgets.QWidget):
             preview.preview_index = i
             preview.enable_glow(False)
 
+    def clear_previews(self):
+        for i in reversed(range(len(self.previews))):
+            self.clear_preview(i)
+
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
             event.acceptProposedAction()

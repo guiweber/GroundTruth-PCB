@@ -13,25 +13,12 @@ class SyncViewer(QtWidgets.QWidget):
     def __init__(self, document):
         super().__init__()
 
+        self.init_variables()
         self.doc = document
 
-        # Annotation state
+        # ----  Annotation Tools ----
         self.annotation_tools = ["line"]
         self.annotation_subtypes = {"line": ["line", "arrow_forward"]}
-        self.current_tool_index = 0
-        self.current_subtype_index = 0
-        self.annotation_thickness = 16
-        self.annotation_mode = False
-        self.select_mode = False
-        self.pending_line = None
-        self.current_series_id = self._new_series_id()
-        self.selected_annotations = []
-        self.drag_action = None
-        self.drag_anchor = None
-        self.annotation_graphics = {}
-        self.rubberband_items = []
-        self.rubberband_previous_pos = None
-        self.undo_stack = []
 
         # ---------- Views ----------
         self.glw = pg.GraphicsLayoutWidget()
@@ -87,6 +74,23 @@ class SyncViewer(QtWidgets.QWidget):
         layout.addWidget(self.glw)
         self.setLayout(layout)
 
+    def init_variables(self):
+        # This should contain all the variables that may need to be reinitialized when the document is cleared
+        self.current_tool_index = 0
+        self.current_subtype_index = 0
+        self.annotation_thickness = 16
+        self.annotation_mode = False
+        self.select_mode = False
+        self.pending_line = None
+        self.current_series_id = self._new_series_id()
+        self.selected_annotations = []
+        self.drag_action = None
+        self.drag_anchor = None
+        self.annotation_graphics = {}
+        self.rubberband_items = []
+        self.rubberband_previous_pos = None
+        self.undo_stack = []
+
     def _current_tool(self):
         return self.annotation_tools[self.current_tool_index]
 
@@ -124,7 +128,7 @@ class SyncViewer(QtWidgets.QWidget):
         point = viewbox.mapSceneToView(pos)
         return (point.x(), point.y())
 
-    def _clear_graphics(self, layer_index=None):
+    def clear_graphics(self, layer_index=None):
         # Removes the annotations of one or all layers from view
         items = []
         if layer_index is None:
@@ -199,10 +203,10 @@ class SyncViewer(QtWidgets.QWidget):
 
     def update_annotations(self, layer_index=None):
         if layer_index is None or layer_index == -1:
-            self._clear_graphics()
+            self.clear_graphics()
             layers_to_draw = [l for l in self.doc.layers if l is not self.doc.get_current_layer()] + [self.doc.get_current_layer()]
         else:
-            self._clear_graphics(layer_index)
+            self.clear_graphics(layer_index)
             layers_to_draw = [self.doc.layers[layer_index]]
 
         for layer in layers_to_draw:
