@@ -185,7 +185,7 @@ class MainWindow(QMainWindow):
 
             # --------------- Annotation Two-Side Mode Deactivation
             if event.key() == Qt.Key.Key_Shift:
-                self.viewer._update_rubberband(shift_pressed=False)
+                self.viewer.update_rubberband(shift_pressed=False)
 
     def keyPressEvent(self, event):
         if self.doc.is_loaded():
@@ -208,7 +208,7 @@ class MainWindow(QMainWindow):
 
             # --------------- Annotation Two-Side Mode Activation
             if event.key() == Qt.Key.Key_Shift and not event.isAutoRepeat():
-                self.viewer._update_rubberband(shift_pressed=True)
+                self.viewer.update_rubberband(shift_pressed=True)
                 return
 
             # --------------- Annotation Mode & Tool Cycling
@@ -227,10 +227,10 @@ class MainWindow(QMainWindow):
             if event.key() == Qt.Key.Key_C:
                 if self.viewer.select_mode and self.viewer.selected_annotations:
                     self.viewer.push_undo_state()
-                    self.viewer._cycle_selected_subtype()
+                    self.viewer.cycle_selected_subtype()
                 elif self.viewer.annotation_mode:
                     self.viewer.current_subtype_index = (self.viewer.current_subtype_index + 1) % len(
-                        self.viewer.annotation_subtypes[self.viewer._current_tool()])
+                        self.viewer.annotation_subtypes[self.viewer.current_tool()])
                 return
 
             # --------------- Annotation Thickness
@@ -254,8 +254,8 @@ class MainWindow(QMainWindow):
                 if self.viewer.annotation_mode:
                     if self.viewer.pending_line is not None:
                         self.viewer.pending_line = None
-                        self.viewer._clear_rubberband()
-                        self.viewer.current_series_id = self.viewer._new_series_id()
+                        self.viewer.clear_rubberband()
+                        self.viewer.current_series_id = self.viewer.new_series_id()
                         self.viewer.update_annotations()
                     else:
                         self.viewer.annotation_mode = False
