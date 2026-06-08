@@ -322,9 +322,10 @@ class AppState:
                 self._state = json.loads(self.state_file.read_text(encoding="utf-8"))
             except Exception:
                 self._set_default_state()
+                self.save()
         else:
             self._set_default_state()
-        self.save()
+            self.save()
 
     def save(self):
         self.state_dir.mkdir(parents=True, exist_ok=True)
