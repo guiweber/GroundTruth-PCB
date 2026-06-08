@@ -164,6 +164,7 @@ class MainWindow(QMainWindow):
             self.update_ui_state()
 
     def save(self):
+        self.viewer.clear_selection()
         if self.doc.saved_gtd:
             self.doc.save()
         else:
