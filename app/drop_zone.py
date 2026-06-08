@@ -11,7 +11,7 @@ from PyQt6.QtCore import (
 
 import numpy as np
 
-LABELS = ["Drop two images\nor a .gtd document here",
+LABELS = ["Drop the front and back images\nor a .gtd document here",
           "One image loaded\nDrop another image to continue",
           "⚠️ Ensure the <span style='color: orange;'>ORANGE</span> and <span style='color:#87CEFA;'>BLUE</span> "
           "sides correspond to the same physical side of the PCB ⚠️",]
