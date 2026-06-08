@@ -109,9 +109,6 @@ class SyncViewer(QtWidgets.QWidget):
         closest = (x1 + t * dx, y1 + t * dy)
         return self._distance(point, closest)
 
-    def _get_layer(self):
-        return self.doc.layers[self.doc.current_layer_index]
-
     def _new_series_id(self):
         return str(uuid.uuid4())
 
@@ -232,7 +229,7 @@ class SyncViewer(QtWidgets.QWidget):
         current = self._scene_to_world(cursor_scene_pos, self.pending_line["view_index"])
 
         # Use the current layer color and apply its alpha
-        layer = self._get_layer()
+        layer = self.doc.get_current_layer()
         qcolor = QColor(layer.color)
         qcolor.setAlphaF(layer.alpha)
 
@@ -252,7 +249,7 @@ class SyncViewer(QtWidgets.QWidget):
             (self.vb1 if side == 0 else self.vb2).addItem(line)
 
     def _find_annotation_hit(self, view_index: int, position: tuple[float, float]):
-        layer = self._get_layer()
+        layer = self.doc.get_current_layer()
         best = None
         best_distance = 1e6
         best_hit = None
@@ -280,7 +277,7 @@ class SyncViewer(QtWidgets.QWidget):
     def _select_annotation(self, annotation: Annotation):
         if not annotation:
             return
-        layer = self._get_layer()
+        layer = self.doc.get_current_layer()
         group_id = annotation.series_id
         self.selected_annotations = [ann for ann in layer.get_annotations() if getattr(ann, "series_id", None) == group_id]
         for ann in layer.get_annotations():
@@ -346,7 +343,7 @@ class SyncViewer(QtWidgets.QWidget):
             series_id=self.current_series_id,
             side_styles=side_styles,
         )
-        self._get_layer().add_annotation(line)
+        self.doc.get_current_layer().add_annotation(line)
         self.update_annotations()
 
         # next pending segment should remember which button originated it

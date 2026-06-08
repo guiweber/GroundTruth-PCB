@@ -234,6 +234,9 @@ class Document:
         self.images[0] = np.rot90(self.images[0], -1)
         self.images[1] = np.rot90(self.images[1], -1)
 
+    def get_current_layer(self):
+        return self.layers[self.current_layer_index]
+
 
 class Layer:
 

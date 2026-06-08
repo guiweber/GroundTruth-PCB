@@ -256,7 +256,7 @@ class MainWindow(QMainWindow):
             if event.key() == Qt.Key.Key_Delete:
                 if self.viewer.select_mode and self.viewer.selected_annotations:
                     self.viewer.push_undo_state()
-                    layer = self.viewer._get_layer()
+                    layer = self.doc.get_current_layer()
                     removal_ids = {ann.uid for ann in self.viewer.selected_annotations}
                     for ann in list(layer.get_annotations()):
                         if ann.uid in removal_ids:
