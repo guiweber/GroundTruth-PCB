@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
     QStackedWidget,
     QFileDialog,
     QWidget,
+    QLabel,
     QHBoxLayout,
     QSplitter,
     QMessageBox,
@@ -89,13 +90,24 @@ class MainWindow(QMainWindow):
         self.toolbar.addAction("Invert X R", lambda: self.viewer.invert(1, "x"))
         self.toolbar.addAction("Invert Y R", lambda: self.viewer.invert(1, "y"))
 
+        self.toolbar.addSeparator()
+        self.toolbar.addAction("Help!", self.show_help)
+
         # --------- Right aligned section
         spacer = QWidget(self.toolbar)
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding,
                              QSizePolicy.Policy.Expanding)
         self.toolbar.addWidget(spacer)
 
-        self.toolbar.addAction("Help!", self.show_help)
+        # Mode / tool indicator
+        self.mode_label = QLabel("")
+        self.mode_label.setContentsMargins(6, 0, 6, 0)
+        self.mode_label.setStyleSheet("padding:4px; background: transparent; color: white;")
+        self.mode_label.setMinimumWidth(self.mode_label.fontMetrics().horizontalAdvance("X"*35))
+        self.toolbar.addWidget(self.mode_label)
+
+        # Initialize the indicator
+        self.update_tool_indicator()
 
     def on_layer_changed(self, index):
         self.viewer.clear_selection()
@@ -182,6 +194,7 @@ class MainWindow(QMainWindow):
             self.toolbar.setEnabled(False)
 
         self.update_app_title()
+        self.update_tool_indicator()
 
     def update_app_title(self):
         if self.doc.saved_gtd:
@@ -189,12 +202,33 @@ class MainWindow(QMainWindow):
         else:
             self.setWindowTitle(self.app_name)
 
+    def update_tool_indicator(self):
+        if not self.doc.is_loaded():
+            self.mode_label.setText("")
+            self.mode_label.setStyleSheet("background: transparent;")
+            return
+
+        if getattr(self.viewer, "annotation_mode", False):
+            tool = self.viewer.current_tool()
+            subtype = self.viewer.current_subtype()
+            text = f"Annotation — {tool} ({subtype})"
+            self.mode_label.setStyleSheet("border-radius:6px; background: #3b6a3b;")
+        elif getattr(self.viewer, "select_mode", False):
+            text = "Selection — active"
+            self.mode_label.setStyleSheet("border-radius:6px; background: #3a3a6a;")
+        else:
+            text = "Active Mode: none"
+            self.mode_label.setStyleSheet("border-radius:6px; background: black;")
+
+        self.mode_label.setText(text)
+
     def keyReleaseEvent(self, event):
         if self.doc.is_loaded():
 
             # --------------- Annotation Two-Side Mode Deactivation
             if event.key() == Qt.Key.Key_Shift:
                 self.viewer.update_rubberband(shift_pressed=False)
+                self.update_tool_indicator()
 
     def keyPressEvent(self, event):
         if self.doc.is_loaded():
@@ -230,6 +264,7 @@ class MainWindow(QMainWindow):
                     self.viewer.current_tool_index = 0
                 self.viewer.pending_line = None
                 self.viewer.clear_selection()
+                self.update_tool_indicator()
                 return
 
             # --------------- Annotation Subtype Cycling
@@ -240,6 +275,7 @@ class MainWindow(QMainWindow):
                 elif self.viewer.annotation_mode:
                     self.viewer.current_subtype_index = (self.viewer.current_subtype_index + 1) % len(
                         self.viewer.annotation_subtypes[self.viewer.current_tool()])
+                self.update_tool_indicator()
                 return
 
             # --------------- Annotation Thickness
@@ -256,6 +292,7 @@ class MainWindow(QMainWindow):
                 self.viewer.select_mode = not self.viewer.select_mode
                 self.viewer.pending_line = None
                 self.viewer.clear_selection()
+                self.update_tool_indicator()
                 return
 
             # --------------- Clear Current Mode/Selection
@@ -273,6 +310,7 @@ class MainWindow(QMainWindow):
                         self.viewer.clear_selection()
                     else:
                         self.viewer.select_mode = False
+                self.update_tool_indicator()
                 return
 
             # --------------- Delete

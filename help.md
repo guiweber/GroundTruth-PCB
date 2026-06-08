@@ -1,8 +1,8 @@
 ## Welcome to Ground Truth - PCB Analysis!
 
-This help file can be displayed at any time by clicking the help button at the right of the tool bar.
+This help file can be displayed at any time by clicking the help button in the toolbar.
 
-Note that the app is in early development and is thus not feature complete but rich in bugs. Feel free to report issues on github
+Note that the app is in early development and is thus not feature complete but rich in bugs. Feel free to report issues on Github.
 Code contributions are welcome.
 
 Enjoy using the app!
@@ -23,7 +23,7 @@ Enjoy using the app!
 - `Esc` → context-sensitive cancel/exit
 - `0-9` → layer selection (10 first layers only)
 
-Note that some actions depend on the current mode (annotation vs selection mode).
+Note that some actions depend on the current mode (annotation vs selection mode). The active tool is displayed at the right end of the toolbar.
 
 ---
 ## Mouse interactions summary
