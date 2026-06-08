@@ -84,8 +84,8 @@ class MainWindow(QMainWindow):
 
         self.toolbar.addAction("Invert X R", lambda: self.viewer.invert(1, "x"))
         self.toolbar.addAction("Invert Y R", lambda: self.viewer.invert(1, "y"))
-        # self.toolbar.addSeparator()
 
+        # --------- Right aligned section
         spacer = QWidget(self.toolbar)
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding,
                              QSizePolicy.Policy.Expanding)

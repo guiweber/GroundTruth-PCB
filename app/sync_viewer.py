@@ -13,8 +13,6 @@ class SyncViewer(QtWidgets.QWidget):
     def __init__(self, document):
         super().__init__()
 
-        #self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-
         self.doc = document
 
         # Annotation state

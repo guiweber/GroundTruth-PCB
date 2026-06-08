@@ -1,6 +1,4 @@
-from uuid import uuid4
-
-from PyQt6 import QtCore, QtGui, QtWidgets
+from PyQt6 import QtGui
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget,
@@ -16,11 +14,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QFrame,
     QStackedLayout,
-    QSizePolicy,
 )
-
-from utils.errors import error_info
-
 
 class LayerItemWidget(QWidget):
     eyeClicked = pyqtSignal(str)
