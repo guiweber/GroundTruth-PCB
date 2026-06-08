@@ -239,7 +239,6 @@ class SyncViewer(QtWidgets.QWidget):
 
         rb_pen = QPen(qcolor)
         rb_pen.setWidth(self.annotation_thickness)
-        rb_pen.setStyle(Qt.PenStyle.SolidLine)
 
         # If Shift is held show both sides,
         # otherwise show only the original start side for the pending line.
@@ -248,6 +247,10 @@ class SyncViewer(QtWidgets.QWidget):
         sides = [0, 1] if shift_pressed else [self.pending_line["start_side"]]
 
         for side in sides:
+            if side == self.pending_line["start_side"]:
+                rb_pen.setStyle(Qt.PenStyle.SolidLine)
+            else:
+                rb_pen.setStyle(Qt.PenStyle.DashLine)
             line = pg.PlotDataItem([start[0], current[0]], [start[1], current[1]], pen=rb_pen)
             self.rubberband_items.append((line, side))
             (self.vb1 if side == 0 else self.vb2).addItem(line)
