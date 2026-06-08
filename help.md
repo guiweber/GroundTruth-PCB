@@ -26,7 +26,16 @@ Enjoy using the app!
 Note that some actions depend on the current mode (annotation vs selection mode).
 
 ---
-## Detailed controls documentation
+## Mouse interactions summary
+- While in annotation mode, left or right click to start a segment; click again to end it and start the next segment
+- The segment is placed in the left or right view according to the click (left or right mouse button) that starts the segment
+- A second click ends a segment that was started. The next segment is then chained and immediately started.
+- The next segment in a chain starts in the left or right view according to the click (left or right mouse button) that ended the previous segment.
+- Double click to end the segment chain.
+- Hold `Shift` while drawing to preview the segment on both views.
+
+---
+# Detailed controls documentation
 
 ___
 ### Annotation Mode
@@ -40,6 +49,37 @@ Behavior:
 - Cycles through available annotation tools if already active
 - Exits selection mode when activated
 - Clears pending annotations and selection state
+
+#### Mouse interactions and annotation mode
+
+Overview
+- Enter annotation mode and choose the line tool to draw linear annotations.
+- Click once in a view to start a new segment; move the mouse to preview the line; click again to finish that segment and (immediately) start the next segment whose start point is the finished end point.
+
+Which view receives the annotation
+- The view that receives a newly created annotation is determined by the click that *starts* the segment. If you start a segment by a left-click, the finished annotation will be placed in the left view (and likewise for right).
+- When drawing a chain of segments, the click that *finishes* the previous segment is also the click that *starts* the next segment and thus also defines the start side of the next segment. 
+
+Preview and `Shift` behavior
+- While a segment is pending (after the first click), a preview shows the line from the start point to the current cursor.
+- Hold `Shift` while drawing to preview that segment on both views simultaneously. Release `Shift` to preview only on the original start side.
+- Ending a line segment while `Shift` is pressed will apply it to both sides, according to the preview. The start of the next segment still depends on the button clicked to finish the segment.
+
+Selection and editing
+- Switch to select mode to pick and move existing annotations or drag endpoints to resize.
+- Deleting or moving segment is also possible while they are selected.
+
+---
+
+### Annotation Subtypes
+
+| Key | Action |
+|-----|--------|
+| `C` | Cycle annotation subtype (context-dependent) |
+
+Behavior:
+- If in selection mode with selected annotations: cycles subtype of selected items
+- If in annotation mode: cycles subtype for current tool
 
 ---
 
@@ -55,18 +95,6 @@ Behavior:
 - Disables annotation mode
 - Clears pending drawing state
 - Toggles selection mode on/off
-
----
-
-### Annotation Subtypes
-
-| Key | Action |
-|-----|--------|
-| `C` | Cycle annotation subtype (context-dependent) |
-
-Behavior:
-- If in selection mode with selected annotations: cycles subtype of selected items
-- If in annotation mode: cycles subtype for current tool
 
 ---
 
