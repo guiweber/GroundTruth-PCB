@@ -268,6 +268,8 @@ class MainWindow(QMainWindow):
                 self.viewer.pending_line = None
                 self.viewer.clear_selection()
                 self.update_tool_indicator()
+                if self.viewer.annotation_mode and self.viewer.current_tool() == TOOL_TEXT:
+                    self.viewer.update_preview()
                 return
 
             # --------------- Annotation Subtype Cycling
@@ -303,9 +305,9 @@ class MainWindow(QMainWindow):
             # --------------- Clear Current Mode/Selection
             if event.key() == Qt.Key.Key_Escape:
                 if self.viewer.annotation_mode:
+                    self.viewer.clear_preview()
                     if self.viewer.pending_line is not None:
                         self.viewer.pending_line = None
-                        self.viewer.clear_preview()
                         self.viewer.current_series_id = self.viewer.new_series_id()
                         self.viewer.update_annotations()
                     else:

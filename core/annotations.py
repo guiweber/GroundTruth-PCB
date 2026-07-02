@@ -7,6 +7,12 @@ from PyQt6.QtGui import QPen, QPolygonF, QColor, QFont
 from PyQt6.QtCore import Qt, QPointF
 import pyqtgraph as pg
 
+
+# Annotation types
+TYPE_TEXT = "Text"
+TYPE_LINE = "Line"
+TYPE_ARROW_F = "Arrow forward"
+
 class Annotation:
 
     def __init__(self, annotation_type: str, subtype: str, thickness: int, sides: list[int], series_id: str | None = None):
@@ -44,20 +50,20 @@ class TextAnnotation(Annotation):
         text: str,
         sides: list[int],
         thickness: int,
-        subtype: str = "text",
+        subtype: str = TYPE_TEXT,
         series_id: str | None = None,
     ):
-        super().__init__("text", subtype, thickness, sides, series_id)
+        super().__init__(TYPE_TEXT, subtype, thickness, sides, series_id)
         self.position = position
         self.text = text
 
-    def draw(self, _, qcolor, target_vb):
+    def draw(self, side, qcolor, target_vb):
         item = QtWidgets.QGraphicsTextItem(self.text)
         item.setDefaultTextColor(qcolor)
         item.setPos(self.position[0], self.position[1])
 
         font = QFont()
-        font.setPointSize(self.thickness * 4)
+        font.setPointSize(self.thickness * 6)
         item.setFont(font)
 
         # Ensure the text is always drawn upright and at the same position, regardless of the viewbox's inversion state
@@ -92,11 +98,11 @@ class LineAnnotation(Annotation):
         end: tuple[float, float],
         sides: list[int],
         thickness: int,
-        subtype: str = "line",
+        subtype: str = TYPE_LINE,
         series_id: str | None = None,
         side_styles: dict | None = None,
     ):
-        super().__init__("line", subtype, thickness, sides, series_id)
+        super().__init__(TYPE_LINE, subtype, thickness, sides, series_id)
         self.start = start
         self.end = end
         # side_styles maps side index (0 or 1) to 'solid' or 'dashed'
@@ -123,7 +129,7 @@ class LineAnnotation(Annotation):
         items = [pg.PlotDataItem([start[0], end[0]], [start[1], end[1]], pen=qp)]
 
         # Arrows
-        if self.subtype != "line":
+        if self.subtype == TYPE_ARROW_F:
             # place arrowhead in the middle of the segment and orient along the segment
             mid_x = (start[0] + end[0]) / 2.0
             mid_y = (start[1] + end[1]) / 2.0

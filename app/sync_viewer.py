@@ -3,7 +3,7 @@ from PyQt6.QtCore import Qt, QEvent, QPointF
 from PyQt6.QtGui import QPen, QColor
 import pyqtgraph as pg
 
-from core.annotations import Annotation, LineAnnotation, TextAnnotation
+from core.annotations import Annotation, LineAnnotation, TextAnnotation, TYPE_LINE, TYPE_ARROW_F, TYPE_TEXT
 
 import copy
 import math
@@ -12,9 +12,6 @@ import uuid
 # Tools
 TOOL_LINE = "Line"
 TOOL_TEXT = "Text"
-
-# Tool Subtypes
-TOOL_ARROW_F = "Arrow forward"
 
 class SyncViewer(QtWidgets.QWidget):
     def __init__(self, document):
@@ -25,7 +22,7 @@ class SyncViewer(QtWidgets.QWidget):
 
         # ----  Annotation Tools ----
         self.annotation_tools = [TOOL_LINE, TOOL_TEXT]
-        self.annotation_subtypes = {TOOL_LINE: [TOOL_LINE, TOOL_ARROW_F], TOOL_TEXT: [TOOL_TEXT]}
+        self.annotation_subtypes = {TOOL_LINE: [TYPE_LINE, TYPE_ARROW_F], TOOL_TEXT: [TYPE_TEXT]}
 
         # ---------- Views ----------
         self.glw = pg.GraphicsLayoutWidget()
@@ -223,10 +220,8 @@ class SyncViewer(QtWidgets.QWidget):
                 pass
         self.preview_items = []
 
-    def _scene_to_world(self, pos: QPointF, fallback_view_index: int = 0):
+    def _scene_to_world(self, pos: QPointF):
         view_index = self._viewbox_at(pos)
-        if view_index is None:
-            view_index = fallback_view_index
         return self._scene_to_view(pos, view_index)
 
     def _draw_annotation(self, annotation: Annotation, side: int, color: str, alpha: float = 1.0, selected: bool = False):
@@ -276,10 +271,11 @@ class SyncViewer(QtWidgets.QWidget):
 
         self.update_preview()
 
-    def update_preview(self, cursor_scene_pos: QPointF = None, shift_pressed=None):
+    def update_preview(self, cursor_scene_pos: QPointF | None = None, shift_pressed=None):
         self.clear_preview()
-        if not self.pending_line:
-            return
+        vbs = [self.vb1, self.vb2]
+
+        # Make sure we have a position to work with
         if cursor_scene_pos is not None:
             self.preview_previous_pos = cursor_scene_pos
         else:
@@ -287,31 +283,43 @@ class SyncViewer(QtWidgets.QWidget):
                 cursor_scene_pos = self.preview_previous_pos
             else:
                 return
-        start = self.pending_line["start"]
-        current = self._scene_to_world(cursor_scene_pos, self.pending_line["view_index"])
+        current_pos = self._scene_to_world(cursor_scene_pos)
 
         # Use the current layer color and apply its alpha
         layer = self.doc.get_current_layer()
         qcolor = QColor(layer.color)
         qcolor.setAlphaF(layer.alpha)
 
-        rb_pen = QPen(qcolor)
-        rb_pen.setWidth(self.annotation_thickness)
+        if self.current_tool() == TOOL_TEXT:
+            text = TextAnnotation(position=current_pos, text="Text", sides=[0,1], thickness=self.annotation_font_size)
+            self.preview_items.append((text.draw(0, qcolor, self.vb1)[0], 0))
+            self.preview_items.append((text.draw(1, qcolor, self.vb2)[0], 1))
 
-        # If Shift is held show both sides,
-        # otherwise show only the original start side for the pending line.
-        if shift_pressed is None:
-            shift_pressed = bool(QtWidgets.QApplication.keyboardModifiers() & Qt.KeyboardModifier.ShiftModifier)
-        sides = [0, 1] if shift_pressed else [self.pending_line["start_side"]]
+        elif self.current_tool() == TOOL_LINE:
+            if not self.pending_line:
+                return
 
-        for side in sides:
-            if side == self.pending_line["start_side"]:
-                rb_pen.setStyle(Qt.PenStyle.SolidLine)
-            else:
-                rb_pen.setStyle(Qt.PenStyle.DashLine)
-            line = pg.PlotDataItem([start[0], current[0]], [start[1], current[1]], pen=rb_pen)
-            self.preview_items.append((line, side))
-            (self.vb1 if side == 0 else self.vb2).addItem(line)
+            start = self.pending_line["start"]
+
+            rb_pen = QPen(qcolor)
+            rb_pen.setWidth(self.annotation_thickness)
+
+            # If Shift is held show both sides,
+            # otherwise show only the original start side for the pending line.
+            if shift_pressed is None:
+                shift_pressed = bool(QtWidgets.QApplication.keyboardModifiers() & Qt.KeyboardModifier.ShiftModifier)
+            sides = [0, 1] if shift_pressed else [self.pending_line["start_side"]]
+
+            for side in sides:
+                if side == self.pending_line["start_side"]:
+                    rb_pen.setStyle(Qt.PenStyle.SolidLine)
+                else:
+                    rb_pen.setStyle(Qt.PenStyle.DashLine)
+                line = pg.PlotDataItem([start[0], current_pos[0]], [start[1], current_pos[1]], pen=rb_pen)
+                self.preview_items.append((line, side))
+
+        for item, side in self.preview_items:
+            vbs[side].addItem(item)
 
     def _find_annotation_hit(self, view_index: int, position: tuple[float, float]):
         layer = self.doc.get_current_layer()
@@ -537,7 +545,7 @@ class SyncViewer(QtWidgets.QWidget):
             self.update_annotations(self.doc.current_layer_index)
             return True
 
-        if self.annotation_mode and self.pending_line is not None:
+        if self.annotation_mode:
             self.update_preview(event.scenePos())
             return False
 
@@ -613,12 +621,12 @@ class SyncViewer(QtWidgets.QWidget):
             for annotation in self.selected_annotations:
                 annotation.thickness = self._compute_annotation_thickness(annotation.thickness, increase)
             self.update_annotations(self.doc.current_layer_index)
-        else:
+        elif self.annotation_mode:
             if self.current_tool() == TOOL_TEXT:
                 self.annotation_font_size = self._compute_annotation_thickness(self.annotation_font_size, increase)
             else:
                 self.annotation_thickness = self._compute_annotation_thickness(self.annotation_thickness, increase)
-                self.update_preview()
+            self.update_preview()
 
     def _compute_annotation_thickness(self, base_thickness, increase:bool):
         # Computes the change in annotation thickness in pixels based on the current thickness
