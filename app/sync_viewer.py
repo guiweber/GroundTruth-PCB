@@ -389,7 +389,7 @@ class SyncViewer(QtWidgets.QWidget):
             if self._distance(ann.end, anchor_point) < 1e-6:
                 ann.move_endpoint(1, dx, dy)
 
-    def _finish_line_segment(self, end_point: tuple[float, float], current_sides: list[int], next_side: int, end_button):
+    def _create_line_segment(self, end_point: tuple[float, float], current_sides: list[int], next_side: int, end_button):
         if not self.pending_line:
             return
         self.push_undo_state()
@@ -513,7 +513,7 @@ class SyncViewer(QtWidgets.QWidget):
                 self.update_preview(event.scenePos(), shift)
             else:
                 current_sides = [0, 1] if shift else [self.pending_line["start_side"]]
-                self._finish_line_segment(view_point, current_sides, next_side, event.button())
+                self._create_line_segment(view_point, current_sides, next_side, event.button())
                 self.update_preview(event.scenePos(), shift)
             return True
 
