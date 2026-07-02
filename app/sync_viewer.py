@@ -10,11 +10,11 @@ import math
 import uuid
 
 # Tools
-TOOL_LINE = "line"
-TOOL_TEXT = "text"
+TOOL_LINE = "Line"
+TOOL_TEXT = "Text"
 
 # Tool Subtypes
-TOOL_ARROW_F = "arrow_forward"
+TOOL_ARROW_F = "Arrow forward"
 
 class SyncViewer(QtWidgets.QWidget):
     def __init__(self, document):

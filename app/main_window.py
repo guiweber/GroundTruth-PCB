@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
 from pathlib import Path
 import json
 
-from app.sync_viewer import SyncViewer
+from app.sync_viewer import SyncViewer, TOOL_TEXT
 from app.drop_zone import DropZone
 from app.layer_panel import LayerPanel
 from core.document import Document
@@ -103,7 +103,7 @@ class MainWindow(QMainWindow):
         self.mode_label = QLabel("")
         self.mode_label.setContentsMargins(6, 0, 6, 0)
         self.mode_label.setStyleSheet("padding:4px; background: transparent; color: white;")
-        self.mode_label.setMinimumWidth(self.mode_label.fontMetrics().horizontalAdvance("X"*35))
+        self.mode_label.setMinimumWidth(self.mode_label.fontMetrics().horizontalAdvance("X"*40))
         self.toolbar.addWidget(self.mode_label)
 
         # Initialize the indicator
@@ -212,7 +212,8 @@ class MainWindow(QMainWindow):
         if getattr(self.viewer, "annotation_mode", False):
             tool = self.viewer.current_tool()
             subtype = self.viewer.current_subtype()
-            text = f"Annotation — {tool} ({subtype})"
+            size = self.viewer.annotation_font_size if tool == TOOL_TEXT else self.viewer.annotation_thickness
+            text = f"Annotation — {tool} ({subtype}) — Size:{size}"
             self.mode_label.setStyleSheet("border-radius:6px; background: #3b6a3b;")
         elif getattr(self.viewer, "select_mode", False):
             text = "Selection — active"
@@ -282,9 +283,11 @@ class MainWindow(QMainWindow):
             # --------------- Annotation Thickness
             if event.key() in (Qt.Key.Key_Plus, Qt.Key.Key_Equal):
                 self.viewer.adjust_annotation_thickness(increase=True)
+                self.update_tool_indicator()
                 return
             if event.key() == Qt.Key.Key_Minus:
                 self.viewer.adjust_annotation_thickness(increase=False)
+                self.update_tool_indicator()
                 return
 
             # --------------- Select Mode
