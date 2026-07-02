@@ -95,8 +95,8 @@ class SyncViewer(QtWidgets.QWidget):
         self.drag_action = None
         self.drag_anchor = None
         self.annotation_graphics = {}
-        self.rubberband_items = []
-        self.rubberband_previous_pos = None
+        self.preview_items = []
+        self.preview_previous_pos = None
         self.undo_stack = []
 
     def current_tool(self):
@@ -214,14 +214,14 @@ class SyncViewer(QtWidgets.QWidget):
                     except Exception:
                         pass
 
-    def clear_rubberband(self):
-        for item, side in self.rubberband_items:
+    def clear_preview(self):
+        for item, side in self.preview_items:
             target_vb = self.vb1 if side == 0 else self.vb2
             try:
                 target_vb.removeItem(item)
             except Exception:
                 pass
-        self.rubberband_items = []
+        self.preview_items = []
 
     def _scene_to_world(self, pos: QPointF, fallback_view_index: int = 0):
         view_index = self._viewbox_at(pos)
@@ -274,17 +274,17 @@ class SyncViewer(QtWidgets.QWidget):
                 for side in getattr(annotation, "sides", []):
                     self._draw_annotation(annotation, side, layer.color, layer.alpha, selected=annotation.selected)
 
-        self.update_rubberband()
+        self.update_preview()
 
-    def update_rubberband(self, cursor_scene_pos: QPointF = None, shift_pressed=None):
-        self.clear_rubberband()
+    def update_preview(self, cursor_scene_pos: QPointF = None, shift_pressed=None):
+        self.clear_preview()
         if not self.pending_line:
             return
         if cursor_scene_pos is not None:
-            self.rubberband_previous_pos = cursor_scene_pos
+            self.preview_previous_pos = cursor_scene_pos
         else:
-            if self.rubberband_previous_pos is not None:
-                cursor_scene_pos = self.rubberband_previous_pos
+            if self.preview_previous_pos is not None:
+                cursor_scene_pos = self.preview_previous_pos
             else:
                 return
         start = self.pending_line["start"]
@@ -310,7 +310,7 @@ class SyncViewer(QtWidgets.QWidget):
             else:
                 rb_pen.setStyle(Qt.PenStyle.DashLine)
             line = pg.PlotDataItem([start[0], current[0]], [start[1], current[1]], pen=rb_pen)
-            self.rubberband_items.append((line, side))
+            self.preview_items.append((line, side))
             (self.vb1 if side == 0 else self.vb2).addItem(line)
 
     def _find_annotation_hit(self, view_index: int, position: tuple[float, float]):
@@ -427,14 +427,14 @@ class SyncViewer(QtWidgets.QWidget):
             "view_index": end_button,
             "start_button": end_button,
         }
-        self.update_rubberband()
+        self.update_preview()
 
     def _cancel_line_entry(self, keep_tool: bool = True):
         self.pending_line = None
         if not keep_tool:
             self.annotation_mode = False
         self.current_series_id = self.new_series_id()
-        self.clear_rubberband()
+        self.clear_preview()
         self.update_annotations()
 
     def eventFilter(self, obj, event):
@@ -510,11 +510,11 @@ class SyncViewer(QtWidgets.QWidget):
                     "view_index": view_index,
                     "start_button": event.button(),
                 }
-                self.update_rubberband(event.scenePos(), shift)
+                self.update_preview(event.scenePos(), shift)
             else:
                 current_sides = [0, 1] if shift else [self.pending_line["start_side"]]
                 self._finish_line_segment(view_point, current_sides, next_side, event.button())
-                self.update_rubberband(event.scenePos(), shift)
+                self.update_preview(event.scenePos(), shift)
             return True
 
         return False
@@ -538,7 +538,7 @@ class SyncViewer(QtWidgets.QWidget):
             return True
 
         if self.annotation_mode and self.pending_line is not None:
-            self.update_rubberband(event.scenePos())
+            self.update_preview(event.scenePos())
             return False
 
         return False
@@ -618,7 +618,7 @@ class SyncViewer(QtWidgets.QWidget):
                 self.annotation_font_size = self._compute_annotation_thickness(self.annotation_font_size, increase)
             else:
                 self.annotation_thickness = self._compute_annotation_thickness(self.annotation_thickness, increase)
-                self.update_rubberband()
+                self.update_preview()
 
     def _compute_annotation_thickness(self, base_thickness, increase:bool):
         # Computes the change in annotation thickness in pixels based on the current thickness

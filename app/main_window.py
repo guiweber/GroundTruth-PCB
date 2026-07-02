@@ -228,7 +228,7 @@ class MainWindow(QMainWindow):
 
             # --------------- Annotation Two-Side Mode Deactivation
             if event.key() == Qt.Key.Key_Shift:
-                self.viewer.update_rubberband(shift_pressed=False)
+                self.viewer.update_preview(shift_pressed=False)
                 self.update_tool_indicator()
 
     def keyPressEvent(self, event):
@@ -252,7 +252,7 @@ class MainWindow(QMainWindow):
 
             # --------------- Annotation Two-Side Mode Activation
             if event.key() == Qt.Key.Key_Shift and not event.isAutoRepeat():
-                self.viewer.update_rubberband(shift_pressed=True)
+                self.viewer.update_preview(shift_pressed=True)
                 return
 
             # --------------- Annotation Mode & Tool Cycling
@@ -301,7 +301,7 @@ class MainWindow(QMainWindow):
                 if self.viewer.annotation_mode:
                     if self.viewer.pending_line is not None:
                         self.viewer.pending_line = None
-                        self.viewer.clear_rubberband()
+                        self.viewer.clear_preview()
                         self.viewer.current_series_id = self.viewer.new_series_id()
                         self.viewer.update_annotations()
                     else:
