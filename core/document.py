@@ -6,7 +6,6 @@ import tempfile
 import uuid
 import zipfile
 from pathlib import Path
-from typing import List, Optional
 
 import numpy as np
 from PIL import Image
@@ -37,14 +36,14 @@ class Document:
         "#fabebe",
     ]
 
-    def __init__(self, paths: Optional[List[str]] = None):
+    def __init__(self, paths: list [str] |None = None):
         self.clear()
         if paths:
             self.load_files(paths)
 
     def clear(self):
         self.loaded = False
-        self.images: List[np.ndarray] = []
+        self.images: list[np.ndarray] = []
         self.current_layer_index = 0
         self.layers = []
         for _ in range(DEFAULT_LAYER_COUNT):
@@ -61,12 +60,12 @@ class Document:
             "axis_inverted": ({"x": False, "y": False}, {"x": False, "y": False}),
         }
         self.saved_gtd = False
-        self._gtd_path: Optional[Path] = None
+        self._gtd_path: Path | None = None
 
     def is_loaded(self) -> bool:
         return self.loaded
 
-    def load_files(self, paths: List[str]):
+    def load_files(self, paths: list[str]):
         """ Tries to load the files from the list. Returns a list containing any load errors."""
         if len(self.images) > 1:
             return []
@@ -177,7 +176,7 @@ class Document:
         color = self.DEFAULT_LAYER_COLORS[len(self.layers) % len(self.DEFAULT_LAYER_COLORS)]
         self.layers.append(Layer(name=f"Layer {len(self.layers) + 1}", color=color))
 
-    def save(self, target_path: Optional[str] = None):
+    def save(self, target_path: str | None = None):
         updating = target_path is None
 
         if updating:
@@ -249,7 +248,7 @@ class Layer:
         self.color = color
         self.visible = visible
         self.alpha = alpha
-        self.items: List[Annotation] = []
+        self.items: list[Annotation] = []
 
     def __getitem__(self, key: int):
         return self.items[key]

@@ -1,6 +1,5 @@
 import math
 import uuid
-from typing import List, Optional, Tuple
 
 from PyQt6 import QtWidgets
 from PyQt6 import QtGui
@@ -10,7 +9,7 @@ import pyqtgraph as pg
 
 class Annotation:
 
-    def __init__(self, annotation_type: str, subtype: str, thickness: int, sides: List[int], series_id: Optional[str] = None):
+    def __init__(self, annotation_type: str, subtype: str, thickness: int, sides: list[int], series_id: str | None = None):
         self.uid = str(uuid.uuid4())
         self.annotation_type = annotation_type
         self.subtype = subtype
@@ -19,7 +18,7 @@ class Annotation:
         self.series_id = series_id or str(uuid.uuid4())
         self.selected = False
 
-    def cycle_subtype(self, available_subtypes: List[str]):
+    def cycle_subtype(self, available_subtypes: list[str]):
         if self.subtype not in available_subtypes:
             self.subtype = available_subtypes[0]
             return
@@ -41,12 +40,12 @@ class TextAnnotation(Annotation):
 
     def __init__(
         self,
-        position: Tuple[float, float],
+        position: tuple[float, float],
         text: str,
-        sides: List[int],
+        sides: list[int],
         thickness: int,
         subtype: str = "text",
-        series_id: Optional[str] = None,
+        series_id: str | None = None,
     ):
         super().__init__("text", subtype, thickness, sides, series_id)
         self.position = position
@@ -89,13 +88,13 @@ class LineAnnotation(Annotation):
 
     def __init__(
         self,
-        start: Tuple[float, float],
-        end: Tuple[float, float],
-        sides: List[int],
+        start: tuple[float, float],
+        end: tuple[float, float],
+        sides: list[int],
         thickness: int,
         subtype: str = "line",
-        series_id: Optional[str] = None,
-        side_styles: Optional[dict] = None,
+        series_id: str | None = None,
+        side_styles: dict | None = None,
     ):
         super().__init__("line", subtype, thickness, sides, series_id)
         self.start = start
