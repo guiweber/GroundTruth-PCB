@@ -3,11 +3,18 @@ from PyQt6.QtCore import Qt, QEvent, QPointF
 from PyQt6.QtGui import QPen, QColor
 import pyqtgraph as pg
 
-from core.annotations import Annotation, LineAnnotation
+from core.annotations import Annotation, LineAnnotation, TextAnnotation
 
 import copy
 import math
 import uuid
+
+# Tools
+TOOL_LINE = "line"
+TOOL_TEXT = "text"
+
+# Tool Subtypes
+TOOL_ARROW_F = "arrow_forward"
 
 class SyncViewer(QtWidgets.QWidget):
     def __init__(self, document):
@@ -17,8 +24,8 @@ class SyncViewer(QtWidgets.QWidget):
         self.doc = document
 
         # ----  Annotation Tools ----
-        self.annotation_tools = ["line"]
-        self.annotation_subtypes = {"line": ["line", "arrow_forward"]}
+        self.annotation_tools = [TOOL_LINE, TOOL_TEXT]
+        self.annotation_subtypes = {TOOL_LINE: [TOOL_LINE, TOOL_ARROW_F], TOOL_TEXT: [TOOL_TEXT]}
 
         # ---------- Views ----------
         self.glw = pg.GraphicsLayoutWidget()
@@ -79,6 +86,7 @@ class SyncViewer(QtWidgets.QWidget):
         self.current_tool_index = 0
         self.current_subtype_index = 0
         self.annotation_thickness = 16
+        self.annotation_font_size = 16
         self.annotation_mode = False
         self.select_mode = False
         self.pending_line = None
@@ -95,7 +103,10 @@ class SyncViewer(QtWidgets.QWidget):
         return self.annotation_tools[self.current_tool_index]
 
     def current_subtype(self):
-        return self.annotation_subtypes[self.current_tool()][self.current_subtype_index]
+        subtypes = self.annotation_subtypes.get(self.current_tool(), [])
+        if not subtypes:
+            return ""
+        return subtypes[self.current_subtype_index]
 
     def _distance(self, a, b):
         return math.hypot(a[0] - b[0], a[1] - b[1])
@@ -115,6 +126,53 @@ class SyncViewer(QtWidgets.QWidget):
 
     def new_series_id(self):
         return str(uuid.uuid4())
+
+    def _edit_selected_text_annotation(self, annotation: Annotation | None = None):
+        if annotation is None:
+            annotation = next((ann for ann in self.selected_annotations if isinstance(ann, TextAnnotation)),None)
+            if not annotation:
+                return False
+
+        if not isinstance(annotation, TextAnnotation):
+            return False
+
+        text, ok = QtWidgets.QInputDialog.getText(
+            self,
+            "Edit text annotation",
+            "Text:",
+            text=annotation.text,
+        )
+        if ok:
+            self.push_undo_state()
+            annotation.text = text
+            self.update_annotations(self.doc.current_layer_index)
+            return True
+        return False
+
+    def _create_text_annotation(self, sides: list[int], position: tuple[float, float]):
+        annotation = TextAnnotation(
+            position=position,
+            text=TOOL_TEXT,
+            sides=sides,
+            thickness=self.annotation_font_size,
+            subtype=self.current_subtype() or TOOL_TEXT,
+            series_id=self.new_series_id(),
+        )
+
+        text, ok = QtWidgets.QInputDialog.getText(
+            self,
+            "New text annotation",
+            "Text:",
+            text=annotation.text,
+        )
+        if not ok or not text:
+            return None
+
+        self.push_undo_state()
+        annotation.text = text
+        self.doc.get_current_layer().add_annotation(annotation)
+        self.update_annotations(self.doc.current_layer_index)
+        return annotation
 
     def _viewbox_at(self, pos: QPointF):
         if self.vb1.sceneBoundingRect().contains(pos):
@@ -179,10 +237,10 @@ class SyncViewer(QtWidgets.QWidget):
             # Use inverted color for selected annotations (solid)
             qcolor = QColor(255 - qcolor.red(), 255 - qcolor.green(), 255 - qcolor.blue(), qcolor.alpha())
 
-        items = annotation.draw(side, qcolor)
+        target_vb = self.vb1 if side == 0 else self.vb2
+        items = annotation.draw(side, qcolor, target_vb)
 
         if items:
-            target_vb = self.vb1 if side == 0 else self.vb2
             for item in items:
                 target_vb.addItem(item)
 
@@ -260,22 +318,31 @@ class SyncViewer(QtWidgets.QWidget):
         best = None
         best_distance = 1e6
         best_hit = None
+        threshold = 30
         for annotation in layer.get_annotations():
             if view_index not in getattr(annotation, "sides", []):
                 continue
+            if isinstance(annotation, TextAnnotation):
+                hit_distance = self._distance(position, annotation.position)
+                if hit_distance < threshold and hit_distance < best_distance:
+                    best = annotation
+                    best_distance = hit_distance
+                    best_hit = "move"
+                continue
+
             start, end = annotation.start, annotation.end
             start_dist = self._distance(position, start)
             end_dist = self._distance(position, end)
-            if start_dist < 10 and start_dist < best_distance:
+            if start_dist < threshold and start_dist < best_distance:
                 best = annotation
                 best_distance = start_dist
                 best_hit = "start"
-            if end_dist < 10 and end_dist < best_distance:
+            if end_dist < threshold and end_dist < best_distance:
                 best = annotation
                 best_distance = end_dist
                 best_hit = "end"
             segment_dist = self._distance_to_segment(position, start, end)
-            if segment_dist < 8 and segment_dist < best_distance:
+            if segment_dist < threshold/2 and segment_dist < best_distance:
                 best = annotation
                 best_distance = segment_dist
                 best_hit = "move"
@@ -300,7 +367,7 @@ class SyncViewer(QtWidgets.QWidget):
     def cycle_selected_subtype(self):
         if not self.selected_annotations:
             return
-        available = self.annotation_subtypes.get("line", [])
+        available = self.annotation_subtypes.get(TOOL_LINE, [])
         for annotation in self.selected_annotations:
             annotation.cycle_subtype(available)
         self.update_annotations(self.doc.current_layer_index)
@@ -375,9 +442,17 @@ class SyncViewer(QtWidgets.QWidget):
             return False
 
         if event.type() == QEvent.Type.GraphicsSceneMouseDoubleClick:
-            if self.annotation_mode and self.current_tool() == "line":
+            if self.annotation_mode and self.current_tool() == TOOL_LINE:
                 self._cancel_line_entry(keep_tool=True)
                 return True
+            if self.select_mode:
+                view_index = self._viewbox_at(event.scenePos())
+                if view_index is not None:
+                    view_point = self._scene_to_view(event.scenePos(), view_index)
+                    annotation, _ = self._find_annotation_hit(view_index, view_point)
+                    if isinstance(annotation, TextAnnotation):
+                        self._edit_selected_text_annotation(annotation)
+                        return True
             return False
 
         if event.type() == QEvent.Type.GraphicsSceneMousePress:
@@ -404,6 +479,9 @@ class SyncViewer(QtWidgets.QWidget):
         shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
         view_point = self._scene_to_view(event.scenePos(), view_index)
 
+        # Sides for non chained annotations
+        sides = [0, 1] if shift else [next_side]
+
         if self.select_mode:
             annotation, hit_type = self._find_annotation_hit(next_side, view_point)
             if annotation:
@@ -420,7 +498,11 @@ class SyncViewer(QtWidgets.QWidget):
                 self.clear_selection()
                 return False
 
-        if self.annotation_mode and self.current_tool() == "line":
+        if self.annotation_mode and self.current_tool() == TOOL_TEXT:
+            self._create_text_annotation(sides, view_point)
+            return True
+
+        if self.annotation_mode and self.current_tool() == TOOL_LINE:
             if self.pending_line is None:
                 self.pending_line = {
                     "start": view_point,
@@ -496,6 +578,8 @@ class SyncViewer(QtWidgets.QWidget):
             viewboxes[which].invertY(not viewboxes[which].yInverted())
             self.doc.config["axis_inverted"][which][axis] = viewboxes[which].yInverted()
 
+        self.update_annotations()  # Only needed for text annotations, could optimize if needed
+
     def pan(self, dx=0, dy=0, frac = 0.05):
         (_, _), (y0, y1) = self.vb1.viewRange()
         step = (y1 - y0) * frac
@@ -523,15 +607,18 @@ class SyncViewer(QtWidgets.QWidget):
         self.vb2.invertY(self.doc.config["axis_inverted"][1]["y"])
         
     def adjust_annotation_thickness(self, increase:bool):
-        # Changes the thickness of the annotation tool or of the selected annotation
+        # Changes the thickness/font size of the annotations tools or of the selected annotation.
         if self.select_mode and self.selected_annotations:
             self.push_undo_state()
             for annotation in self.selected_annotations:
                 annotation.thickness = self._compute_annotation_thickness(annotation.thickness, increase)
             self.update_annotations(self.doc.current_layer_index)
         else:
-            self.annotation_thickness = self._compute_annotation_thickness(self.annotation_thickness, increase)
-            self.update_rubberband()
+            if self.current_tool() == TOOL_TEXT:
+                self.annotation_font_size = self._compute_annotation_thickness(self.annotation_font_size, increase)
+            else:
+                self.annotation_thickness = self._compute_annotation_thickness(self.annotation_thickness, increase)
+                self.update_rubberband()
 
     def _compute_annotation_thickness(self, base_thickness, increase:bool):
         # Computes the change in annotation thickness in pixels based on the current thickness

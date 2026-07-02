@@ -10,7 +10,7 @@ Enjoy using the app!
 ---
 ## Controls Summary
 
-- `F` → enter annotation mode and cycle tools
+- `F` → enter annotation mode and cycle between tools
 - `C` → cycle annotation subtype while in annotation mode
 - `X` → toggle selection mode
 - `+/-` → change annotation size
@@ -27,12 +27,20 @@ Note that some actions depend on the current mode (annotation vs selection mode)
 
 ---
 ## Mouse interactions summary
-- While in annotation mode, left or right click to start a segment; click again to end it and start the next segment
+
+### Line annotations
+- While in line annotation mode, left or right click to start a segment; click again to end it and start the next segment
 - The segment is placed in the left or right view according to the click (left or right mouse button) that starts the segment
 - A second click ends a segment that was started. The next segment is then chained and immediately started.
 - The next segment in a chain starts in the left or right view according to the click (left or right mouse button) that ended the previous segment.
 - Double click to end the segment chain.
-- Hold `Shift` while drawing to preview the segment on both views.
+- Hold `Shift` while drawing to preview/place the segment on both views.
+
+### Text annotations
+- While in text annotation mode, left or right click to create a text annotation.
+- The annotation is placed in the left or right view according to the click (left or right mouse button) that was clicked.
+- Holding `Shift` while placing a text annotation will place it in both views.
+- While in selection mode, double clicking on the selection point of a text annotation allows editing its text.
 
 ---
 # Detailed controls documentation
@@ -116,6 +124,7 @@ Behavior:
 | Key | Action |
 |-----|--------|
 | `Delete` | Remove selected annotations |
+| `Enter`  | Edit the text of the selected text annotation |
 
 
 ---
@@ -143,6 +152,7 @@ Behavior:
 Behavior:
 - Only the first 10 layers are selectable with the number keys
 - Any selected annotation will be unselected when changing layer
+- Annotations can only be inserted/selected in the current layer
 
 ---
 

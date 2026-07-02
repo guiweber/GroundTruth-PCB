@@ -3,17 +3,19 @@ import uuid
 from typing import List, Optional, Tuple
 
 from PyQt6 import QtWidgets
-from PyQt6.QtGui import QPen, QPolygonF, QColor
+from PyQt6 import QtGui
+from PyQt6.QtGui import QPen, QPolygonF, QColor, QFont
 from PyQt6.QtCore import Qt, QPointF
 import pyqtgraph as pg
 
 class Annotation:
 
-    def __init__(self, annotation_type: str, subtype: str, thickness: int, series_id: Optional[str] = None):
+    def __init__(self, annotation_type: str, subtype: str, thickness: int, sides: List[int], series_id: Optional[str] = None):
         self.uid = str(uuid.uuid4())
         self.annotation_type = annotation_type
         self.subtype = subtype
         self.thickness = thickness
+        self.sides = sides
         self.series_id = series_id or str(uuid.uuid4())
         self.selected = False
 
@@ -25,7 +27,7 @@ class Annotation:
         index = (index + 1) % len(available_subtypes)
         self.subtype = available_subtypes[index]
 
-    def draw(self, side: int, qcolor: QColor):
+    def draw(self, side: int, qcolor: QColor, target_vb: pg.ViewBox):
         raise NotImplementedError
 
     def move_by(self, dx: float, dy: float):
@@ -33,6 +35,54 @@ class Annotation:
 
     def move_endpoint(self, endpoint_index: int, dx: float, dy: float):
         raise NotImplementedError
+
+
+class TextAnnotation(Annotation):
+
+    def __init__(
+        self,
+        position: Tuple[float, float],
+        text: str,
+        sides: List[int],
+        thickness: int,
+        subtype: str = "text",
+        series_id: Optional[str] = None,
+    ):
+        super().__init__("text", subtype, thickness, sides, series_id)
+        self.position = position
+        self.text = text
+
+    def draw(self, _, qcolor, target_vb):
+        item = QtWidgets.QGraphicsTextItem(self.text)
+        item.setDefaultTextColor(qcolor)
+        item.setPos(self.position[0], self.position[1])
+
+        font = QFont()
+        font.setPointSize(self.thickness * 4)
+        item.setFont(font)
+
+        # Ensure the text is always drawn upright and at the same position, regardless of the viewbox's inversion state
+        # Center the text around the anchor point before applying the transform, then translate back, to prevent the text flipping around the anchor point when inverting
+        scale_x = -1 if target_vb.xInverted() else 1
+        scale_y = 1 if target_vb.yInverted() else -1 # Invert by default because text uses screen coordinates
+
+        rect = item.boundingRect()
+        cx = rect.width() / 2
+        cy = rect.height() / 2
+
+        t = QtGui.QTransform()
+        t.translate(cx, cy)
+        t.scale(scale_x, scale_y)
+        t.translate(-cx, -cy)
+        item.setTransform(t, False)
+
+        return [item]
+
+    def move_by(self, dx: float, dy: float):
+        self.position = (self.position[0] + dx, self.position[1] + dy)
+
+    def move_endpoint(self, endpoint_index: int, dx: float, dy: float):
+        return None
 
 
 class LineAnnotation(Annotation):
@@ -47,10 +97,9 @@ class LineAnnotation(Annotation):
         series_id: Optional[str] = None,
         side_styles: Optional[dict] = None,
     ):
-        super().__init__("line", subtype, thickness, series_id)
+        super().__init__("line", subtype, thickness, sides, series_id)
         self.start = start
         self.end = end
-        self.sides = sides
         # side_styles maps side index (0 or 1) to 'solid' or 'dashed'
         if side_styles is None:
             # default: solid on all specified sides
@@ -59,7 +108,7 @@ class LineAnnotation(Annotation):
             # ensure keys present for sides
             self.side_styles = {s: side_styles.get(s, "solid") for s in self.sides}
 
-    def draw(self, side, qcolor):
+    def draw(self, side, qcolor, _):
 
         # Determine whether this side should be dashed (selection no longer uses dashes)
         side_style = getattr(self, "side_styles", {}).get(side, "solid")

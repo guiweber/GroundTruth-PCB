@@ -314,6 +314,12 @@ class MainWindow(QMainWindow):
                 self.update_tool_indicator()
                 return
 
+            # --------------- Edit selected text annotation
+            if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+                if self.viewer.select_mode and self.viewer.selected_annotations:
+                    self.viewer._edit_selected_text_annotation()
+                    return
+
             # --------------- Delete
             if event.key() == Qt.Key.Key_Delete:
                 if self.viewer.select_mode and self.viewer.selected_annotations:
