@@ -177,7 +177,7 @@ class MainWindow(QMainWindow):
             self.doc.save(path)
 
     def show_help(self):
-        HelpInfo(self).exec()
+        HelpInfo(self).show()
 
     def update_ui_state(self):
         if self.doc.is_loaded():
