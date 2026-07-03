@@ -113,7 +113,7 @@ class LineAnnotation(Annotation):
             # ensure keys present for sides
             self.side_styles = {s: side_styles.get(s, "solid") for s in self.sides}
 
-    def draw(self, side, qcolor, _):
+    def draw(self, side, qcolor, _ = None):
 
         # Determine whether this side should be dashed (selection no longer uses dashes)
         side_style = getattr(self, "side_styles", {}).get(side, "solid")

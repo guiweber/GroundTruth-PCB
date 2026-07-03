@@ -275,6 +275,9 @@ class SyncViewer(QtWidgets.QWidget):
         self.clear_preview()
         vbs = [self.vb1, self.vb2]
 
+        if shift_pressed is None:
+            shift_pressed = bool(QtWidgets.QApplication.keyboardModifiers() & Qt.KeyboardModifier.ShiftModifier)
+
         # Make sure we have a position to work with
         if cursor_scene_pos is not None:
             self.preview_previous_pos = cursor_scene_pos
@@ -295,28 +298,13 @@ class SyncViewer(QtWidgets.QWidget):
             self.preview_items.append((text.draw(0, qcolor, self.vb1)[0], 0))
             self.preview_items.append((text.draw(1, qcolor, self.vb2)[0], 1))
 
-        elif self.current_tool() == TOOL_LINE:
-            if not self.pending_line:
-                return
-
-            start = self.pending_line["start"]
-
-            rb_pen = QPen(qcolor)
-            rb_pen.setWidth(self.annotation_thickness)
-
-            # If Shift is held show both sides,
-            # otherwise show only the original start side for the pending line.
-            if shift_pressed is None:
-                shift_pressed = bool(QtWidgets.QApplication.keyboardModifiers() & Qt.KeyboardModifier.ShiftModifier)
+        elif self.current_tool() == TOOL_LINE and self.pending_line is not None:
             sides = [0, 1] if shift_pressed else [self.pending_line["start_side"]]
+            line = self._get_pending_line_annotation(current_pos, sides)
 
-            for side in sides:
-                if side == self.pending_line["start_side"]:
-                    rb_pen.setStyle(Qt.PenStyle.SolidLine)
-                else:
-                    rb_pen.setStyle(Qt.PenStyle.DashLine)
-                line = pg.PlotDataItem([start[0], current_pos[0]], [start[1], current_pos[1]], pen=rb_pen)
-                self.preview_items.append((line, side))
+            if line is not None:
+                for side in sides:
+                    self.preview_items.extend([(i, side) for i in line.draw(side, qcolor)])
 
         for item, side in self.preview_items:
             vbs[side].addItem(item)
@@ -397,45 +385,51 @@ class SyncViewer(QtWidgets.QWidget):
             if self._distance(ann.end, anchor_point) < 1e-6:
                 ann.move_endpoint(1, dx, dy)
 
-    def _create_line_segment(self, end_point: tuple[float, float], current_sides: list[int], next_side: int, end_button):
-        if not self.pending_line:
-            return
-        self.push_undo_state()
+    def _create_line_segment(self, end_point: tuple[float, float], current_sides: list[int], next_side: int, end_button: Qt.MouseButton):
+        line = self._get_pending_line_annotation(end_point, current_sides)
+        if line is not None:
+            self.push_undo_state()
+            self.doc.get_current_layer().add_annotation(line)
+            self.update_annotations(self.doc.current_layer_index)
+
+            # next pending segment should remember which button originated it
+            self.pending_line = {
+                "start": end_point,
+                "start_side": next_side,
+                "view_index": end_button,
+                "start_button": end_button,
+            }
+            self.update_preview()
+
+    def _get_pending_line_annotation(self, end: tuple[float, float], sides: list[int]):
+        #Return a LineAnnotation based on the pending line
+        if self.pending_line is None:
+            return None
+
         # determine per-side styles. If both sides are present and the pending_line
         # recorded an origin side (the mouse button used when starting), make that
         # origin side solid and the opposite dashed. Single-side annotations are solid.
         # The style is determined by the button used to finish the segment
         side_styles = {}
-        if set(current_sides) == {0, 1}:
+        if set(sides) == {0, 1}:
             # if the finishing mouse button was left, make left view solid
-            if end_button == Qt.MouseButton.LeftButton:
+            if self.pending_line["start_button"] == Qt.MouseButton.LeftButton:
                 side_styles = {0: "solid", 1: "dashed"}
             else:
                 side_styles = {0: "dashed", 1: "solid"}
         else:
-            for s in current_sides:
+            for s in sides:
                 side_styles[s] = "solid"
 
-        line = LineAnnotation(
+        return LineAnnotation(
             start=self.pending_line["start"],
-            end=end_point,
-            sides=current_sides,
+            end=end,
+            sides=sides,
             thickness=self.annotation_thickness,
             subtype=self.current_subtype(),
             series_id=self.current_series_id,
             side_styles=side_styles,
         )
-        self.doc.get_current_layer().add_annotation(line)
-        self.update_annotations(self.doc.current_layer_index)
-
-        # next pending segment should remember which button originated it
-        self.pending_line = {
-            "start": end_point,
-            "start_side": next_side,
-            "view_index": end_button,
-            "start_button": end_button,
-        }
-        self.update_preview()
 
     def _cancel_line_entry(self, keep_tool: bool = True):
         self.pending_line = None
