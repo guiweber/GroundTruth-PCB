@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
     QFrame,
     QStackedLayout,
 )
+from utils.ui import get_emoji_font
 
 class LayerItemWidget(QWidget):
     eyeClicked = pyqtSignal(str)
@@ -59,6 +60,7 @@ class LayerItemWidget(QWidget):
         self.name_label.setText(layer.name)
         self.eye_button.setChecked(layer.visible)
         self.eye_button.setText("👁" if layer.visible else "🚫")
+        self.eye_button.setFont(get_emoji_font())
 
         color = QtGui.QColor(layer.color)
         self.color_dot.setStyleSheet(
