@@ -273,6 +273,9 @@ class SyncViewer(QtWidgets.QWidget):
 
     def update_preview(self, cursor_scene_pos: QPointF | None = None, shift_pressed=None):
         self.clear_preview()
+        if not self.annotation_mode:
+            return
+
         vbs = [self.vb1, self.vb2]
 
         if shift_pressed is None:

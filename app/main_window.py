@@ -280,7 +280,8 @@ class MainWindow(QMainWindow):
                 elif self.viewer.annotation_mode:
                     self.viewer.current_subtype_index = (self.viewer.current_subtype_index + 1) % len(
                         self.viewer.annotation_subtypes[self.viewer.current_tool()])
-                self.update_tool_indicator()
+                    self.viewer.update_preview()
+                    self.update_tool_indicator()
                 return
 
             # --------------- Annotation Thickness
@@ -295,10 +296,13 @@ class MainWindow(QMainWindow):
 
             # --------------- Select Mode
             if event.key() == Qt.Key.Key_X:
-                self.viewer.annotation_mode = False
+                if self.viewer.annotation_mode:
+                    self.viewer.clear_preview()
+                    self.viewer.pending_line = None
+                    self.viewer.annotation_mode = False
+                elif self.viewer.select_mode:
+                    self.viewer.clear_selection()
                 self.viewer.select_mode = not self.viewer.select_mode
-                self.viewer.pending_line = None
-                self.viewer.clear_selection()
                 self.update_tool_indicator()
                 return
 
@@ -309,7 +313,6 @@ class MainWindow(QMainWindow):
                     if self.viewer.pending_line is not None:
                         self.viewer.pending_line = None
                         self.viewer.current_series_id = self.viewer.new_series_id()
-                        self.viewer.update_annotations()
                     else:
                         self.viewer.annotation_mode = False
                 elif self.viewer.select_mode:
