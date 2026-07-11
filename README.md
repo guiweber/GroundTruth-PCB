@@ -1,9 +1,11 @@
 # GroundTruth - PCB Analysis
 Ground Truth is a PCB analysis tool for inspecting, analyzing and annotating PCB images (front and back) side by side in synchronized views.
 
-Note that the app is in early development and thus not feature complete but rich in bugs. At this point, savefile compatibility is not guaranteed when upgrading.
-
 Contributions and pull requests are welcome! If you have a larger feature in mind please open an issue so we can discuss the implementation before you start.
+
+⚠️ Note that the app is in early development and thus not feature complete but rich in bugs. At this point, savefile compatibility is not guaranteed when upgrading.
+
+![Image](https://raw.githubusercontent.com/guiweber/MetaMedia/main/Ground%20Truth%20PCB/ground_truth_ui_screenshot.jpg)
 
 ## Running the app
 - Clone the repo
