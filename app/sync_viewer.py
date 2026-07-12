@@ -332,19 +332,23 @@ class SyncViewer(QtWidgets.QWidget):
             start, end = annotation.start, annotation.end
             start_dist = self._distance(position, start)
             end_dist = self._distance(position, end)
-            if start_dist < threshold and start_dist < best_distance:
-                best = annotation
-                best_distance = start_dist
-                best_hit = "start"
-            if end_dist < threshold and end_dist < best_distance:
-                best = annotation
-                best_distance = end_dist
-                best_hit = "end"
-            segment_dist = self._distance_to_segment(position, start, end)
-            if segment_dist < threshold/2 and segment_dist < best_distance:
-                best = annotation
-                best_distance = segment_dist
-                best_hit = "move"
+            # Start and End points take precedence over whole segments (drag point > move whole segment)
+            if start_dist < threshold:
+                if start_dist < best_distance or best_hit == "move":
+                    best = annotation
+                    best_distance = start_dist
+                    best_hit = "start"
+            if end_dist < threshold:
+                if start_dist < best_distance or best_hit == "move":
+                    best = annotation
+                    best_distance = end_dist
+                    best_hit = "end"
+            if best is None or best_hit == "move":
+                segment_dist = self._distance_to_segment(position, start, end)
+                if segment_dist < threshold/2 and segment_dist < best_distance:
+                    best = annotation
+                    best_distance = segment_dist
+                    best_hit = "move"
         return best, best_hit
 
     def _select_annotation(self, annotation: Annotation):
