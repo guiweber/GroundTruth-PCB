@@ -129,12 +129,6 @@ class MainWindow(QMainWindow):
             return
 
         load_errors = self.doc.load_files(paths)
-
-        if not self.doc.is_loaded():
-            n_load =  len(self.doc.images)-len(self.drop_zone.previews)
-            for i in range(n_load):
-                self.drop_zone.set_preview_image()
-
         self.update_ui_state()
 
         # Only display errors after UI update in case some files were successful
@@ -193,6 +187,9 @@ class MainWindow(QMainWindow):
         else:
             self.stack.setCurrentWidget(self.drop_zone)
             self.toolbar.setEnabled(False)
+            n_load = len(self.doc.images) - len(self.drop_zone.previews)
+            for i in range(n_load):
+                self.drop_zone.set_preview_image()
 
         self.update_app_title()
         self.update_tool_indicator()
