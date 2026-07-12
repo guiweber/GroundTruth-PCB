@@ -39,7 +39,7 @@ class Document:
     def __init__(self, paths: list [str] |None = None):
         self.clear()
         if paths:
-            self.load_files(paths)
+            [print(f"Error: {e}") for e in self.load_files(paths)]
 
     def clear(self):
         self.loaded = False
@@ -70,22 +70,22 @@ class Document:
         if len(self.images) > 1:
             return []
 
+        errors = []
         resolved = []
         for p in paths:
             try:
-                resolved.append(Path(p).expanduser().resolve())
-            except Exception:
-                continue
-
-        resolved = [p for p in resolved if p.exists() and p.is_file()]
-        if not resolved:
-            return ["Files paths could not be resolved"]
+                resolved_path = Path(p).expanduser().resolve()
+                if resolved_path.exists() and resolved_path.is_file():
+                    resolved.append(resolved_path)
+                else:
+                    errors.append(f"Could not resolve path to file: {p}")
+            except Exception as e:
+                errors.append(e)
 
         gtd_files = [p for p in resolved if p.suffix.lower() == DOCUMENT_EXT]
         if gtd_files:
             return self.__load_gtd(gtd_files[0])
 
-        errors = []
         for path in resolved:
             if len(self.images) > 1:
                 break
@@ -112,7 +112,7 @@ class Document:
     def __load_gtd(self, path: Path):
         try:
             if not zipfile.is_zipfile(path):
-                return ["Invalid .gtd file (not a zip archive)"]
+                return ["Invalid .gtd file - Underlying zip file structure not detected"]
 
             with zipfile.ZipFile(path, "r") as zf:
 
@@ -128,7 +128,7 @@ class Document:
                     try:
                         layers_data = pickle.loads(zf.read("layers.pkl"))
                     except Exception as e:
-                        return [f"Unable to read layer informatoin from file: \n{e}"]
+                        return [f"Unable to read layer information from file: \n{e}"]
 
                 image_files = sorted(
                     [f for f in zf.namelist() if f.startswith("image_") and f.endswith(".jpg")]
