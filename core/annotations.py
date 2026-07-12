@@ -2,8 +2,7 @@ import math
 import uuid
 
 from PyQt6 import QtWidgets
-from PyQt6 import QtGui
-from PyQt6.QtGui import QPen, QPolygonF, QColor, QFont
+from PyQt6.QtGui import QBrush, QPen, QPolygonF, QColor, QFont, QTransform
 from PyQt6.QtCore import Qt, QPointF
 import pyqtgraph as pg
 
@@ -35,6 +34,9 @@ class Annotation:
     def draw(self, side: int, qcolor: QColor, target_vb: pg.ViewBox):
         raise NotImplementedError
 
+    def draw_selection_points(self, side: int):
+        raise NotImplementedError
+
     def move_by(self, dx: float, dy: float):
         raise NotImplementedError
 
@@ -56,6 +58,8 @@ class TextAnnotation(Annotation):
         super().__init__(TYPE_TEXT, subtype, thickness, sides, series_id)
         self.position = position
         self.text = text
+        self.width: float = 0
+        self.height: float = 0
 
     def draw(self, side, qcolor, target_vb):
         item = QtWidgets.QGraphicsTextItem(self.text)
@@ -72,16 +76,33 @@ class TextAnnotation(Annotation):
         scale_y = 1 if target_vb.yInverted() else -1 # Invert by default because text uses screen coordinates
 
         rect = item.boundingRect()
+        self.width = rect.width()
+        self.height = rect.height()
         cx = rect.width() / 2
         cy = rect.height() / 2
 
-        t = QtGui.QTransform()
+        t = QTransform()
         t.translate(cx, cy)
         t.scale(scale_x, scale_y)
         t.translate(-cx, -cy)
         item.setTransform(t, False)
 
         return [item]
+
+    def draw_selection_points(self, side: int):
+        # Bounding box
+        rect_item = QtWidgets.QGraphicsRectItem(0, 0, self.width, self.height)
+        pen = QPen(QColor("white"), 2, Qt.PenStyle.DotLine)
+        rect_item.setPen(pen)
+        rect_item.setBrush(QBrush(Qt.BrushStyle.NoBrush))
+        rect_item.setPos(*self.position)
+
+        # Selection point
+        r = 24
+        circle = QtWidgets.QGraphicsEllipseItem(self.position[0] - r, self.position[1] - r, 2 * r, 2 * r)
+        circle.setPen(QPen(QColor("white"), 2))
+        circle.setBrush(QBrush(Qt.BrushStyle.NoBrush))
+        return [circle, rect_item]
 
     def move_by(self, dx: float, dy: float):
         self.position = (self.position[0] + dx, self.position[1] + dy)
@@ -169,6 +190,16 @@ class LineAnnotation(Annotation):
             gitem.setPen(pen_for_arrow)
             items.append(gitem)
 
+        return items
+
+    def draw_selection_points(self, side: int):
+        r = 24
+        start = QtWidgets.QGraphicsEllipseItem(self.start[0] - r, self.start[1] - r, 2 * r, 2 * r)
+        end = QtWidgets.QGraphicsEllipseItem(self.end[0] - r, self.end[1] - r, 2 * r, 2 * r)
+        items = [start, end]
+        for i in items:
+            i.setPen(QPen(QColor("white"), 2))
+            i.setBrush(QBrush(Qt.BrushStyle.NoBrush))
         return items
 
     def move_by(self, dx: float, dy: float):

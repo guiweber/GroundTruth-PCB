@@ -40,7 +40,7 @@ Note that some actions depend on the current mode (annotation vs selection mode)
 - While in text annotation mode, left or right click to create a text annotation.
 - The annotation is placed in the left or right view according to the click (left or right mouse button) that was clicked.
 - Holding `Shift` while placing a text annotation will place it in both views.
-- While in selection mode, double clicking on the selection point of a text annotation allows editing its text.
+- While in selection mode, double-clicking in the selection circle of a text annotation allows editing its text.
 
 ---
 # Detailed controls documentation
@@ -58,10 +58,10 @@ Behavior:
 - Exits selection mode when activated
 - Clears pending annotations and selection state
 
-#### Mouse interactions and annotation mode
+### Mouse interactions in annotation mode
 
-Overview
-- Enter annotation mode and choose the line tool to draw linear annotations.
+An example with line annotations
+- Enter annotation mode and choose the line tool to draw line annotations.
 - Click once in a view to start a new segment; move the mouse to preview the line; click again to finish that segment and (immediately) start the next segment whose start point is the finished end point.
 
 Which view receives the annotation
@@ -73,9 +73,16 @@ Preview and `Shift` behavior
 - Hold `Shift` while drawing to preview that segment on both views simultaneously. Release `Shift` to preview only on the original start side.
 - Ending a line segment while `Shift` is pressed will apply it to both sides, according to the preview. The start of the next segment still depends on the button clicked to finish the segment.
 
-Selection and editing
-- Switch to select mode to pick and move existing annotations or drag endpoints to resize.
-- Deleting or moving segment is also possible while they are selected.
+Other types of annotations work in similar ways.
+
+### Mouse interactions in selection mode
+- While in selection mode, click on annotation lines to select and move them
+- When selected, an annotation changes color until it is deselected
+- Only annotations in the current layer can be selected
+- Click and drag annotation endpoints to resize
+- Text annotations can only be selected and moved by clicking their selection circle, not their lines
+- Left clicks affect the left view, while right clicks affect the right view
+- Deleting, modifying annotation properties (e.g. thickness) is also possible while they are selected
 
 ---
 
@@ -98,11 +105,12 @@ Behavior:
 | `X` | Toggle selection mode |
 
 Behavior:
-- When activated, annotations can be selected by clicking on them
-- Selected annotations can be edited in various ways
-- Disables annotation mode
-- Clears pending drawing state
-- Toggles selection mode on/off
+- When activated, annotations can be selected by clicking on them or in their selection circles
+- Selection circles are hints drawn over selectable endpoints to show the selection radius
+- Click inside those circles to drag an endpoint without moving the whole shape (except for text annotations where this moves the whole text)
+- Text annotations can only be selected by clicking their selection circles
+- Other annotations can be selected by clicking anywhere on their lines to select/move the whole shape
+- Only annotations in the current layer can be selected
 
 ---
 

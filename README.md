@@ -21,9 +21,7 @@ Contributions and pull requests are welcome! If you have a larger feature in min
 ## Roadmap / Todo
 
 - Add warning about savefile trust/safety
-- Improve line selection
-  - Show where the segment joints can be selected
-  - Adjust the selection radius based on zoom level/pixel density?
+- Adjust the selection radius & hint line thickness based on annotation thickness
 - Add box annotation tool
 - Make keybindings user-editable via a config file
 - Make annotation transparency uniform within a layer instead of additive

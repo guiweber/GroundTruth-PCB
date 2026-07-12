@@ -273,7 +273,8 @@ class SyncViewer(QtWidgets.QWidget):
 
     def update_preview(self, cursor_scene_pos: QPointF | None = None, shift_pressed=None):
         self.clear_preview()
-        if not self.annotation_mode:
+        layer = self.doc.get_current_layer()
+        if not layer.visible:
             return
 
         vbs = [self.vb1, self.vb2]
@@ -281,33 +282,38 @@ class SyncViewer(QtWidgets.QWidget):
         if shift_pressed is None:
             shift_pressed = bool(QtWidgets.QApplication.keyboardModifiers() & Qt.KeyboardModifier.ShiftModifier)
 
-        # Make sure we have a position to work with
-        if cursor_scene_pos is not None:
-            self.preview_previous_pos = cursor_scene_pos
-        else:
-            if self.preview_previous_pos is not None:
-                cursor_scene_pos = self.preview_previous_pos
+        if self.annotation_mode:
+            # Make sure we have a position to work with
+            if cursor_scene_pos is not None:
+                self.preview_previous_pos = cursor_scene_pos
             else:
-                return
-        current_pos = self._scene_to_world(cursor_scene_pos)
+                if self.preview_previous_pos is not None:
+                    cursor_scene_pos = self.preview_previous_pos
+                else:
+                    return
+            current_pos = self._scene_to_world(cursor_scene_pos)
 
-        # Use the current layer color and apply its alpha
-        layer = self.doc.get_current_layer()
-        qcolor = QColor(layer.color)
-        qcolor.setAlphaF(layer.alpha)
+            # Use the current layer color and apply its alpha
+            qcolor = QColor(layer.color)
+            qcolor.setAlphaF(layer.alpha)
 
-        if self.current_tool() == TOOL_TEXT:
-            text = TextAnnotation(position=current_pos, text="Text", sides=[0,1], thickness=self.annotation_font_size)
-            self.preview_items.append((text.draw(0, qcolor, self.vb1)[0], 0))
-            self.preview_items.append((text.draw(1, qcolor, self.vb2)[0], 1))
+            if self.current_tool() == TOOL_TEXT:
+                text = TextAnnotation(position=current_pos, text="Text", sides=[0,1], thickness=self.annotation_font_size)
+                self.preview_items.append((text.draw(0, qcolor, self.vb1)[0], 0))
+                self.preview_items.append((text.draw(1, qcolor, self.vb2)[0], 1))
 
-        elif self.current_tool() == TOOL_LINE and self.pending_line is not None:
-            sides = [0, 1] if shift_pressed else [self.pending_line["start_side"]]
-            line = self._get_pending_line_annotation(current_pos, sides)
+            elif self.current_tool() == TOOL_LINE and self.pending_line is not None:
+                sides = [0, 1] if shift_pressed else [self.pending_line["start_side"]]
+                line = self._get_pending_line_annotation(current_pos, sides)
 
-            if line is not None:
-                for side in sides:
-                    self.preview_items.extend([(i, side) for i in line.draw(side, qcolor)])
+                if line is not None:
+                    for side in sides:
+                        self.preview_items.extend([(i, side) for i in line.draw(side, qcolor)])
+
+        elif self.select_mode:
+            for annotation in layer.get_annotations():
+                for side in getattr(annotation, "sides", []):
+                    self.preview_items.extend([(i, side) for i in annotation.draw_selection_points(side)])
 
         for item, side in self.preview_items:
             vbs[side].addItem(item)
@@ -317,7 +323,7 @@ class SyncViewer(QtWidgets.QWidget):
         best = None
         best_distance = 1e6
         best_hit = None
-        threshold = 30
+        threshold = 24
         for annotation in layer.get_annotations():
             if view_index not in getattr(annotation, "sides", []):
                 continue
@@ -345,7 +351,7 @@ class SyncViewer(QtWidgets.QWidget):
                     best_hit = "end"
             if best is None or best_hit == "move":
                 segment_dist = self._distance_to_segment(position, start, end)
-                if segment_dist < threshold/2 and segment_dist < best_distance:
+                if segment_dist < threshold/1.5 and segment_dist < best_distance:
                     best = annotation
                     best_distance = segment_dist
                     best_hit = "move"
@@ -397,7 +403,6 @@ class SyncViewer(QtWidgets.QWidget):
         if line is not None:
             self.push_undo_state()
             self.doc.get_current_layer().add_annotation(line)
-            self.update_annotations(self.doc.current_layer_index)
 
             # next pending segment should remember which button originated it
             self.pending_line = {
@@ -406,7 +411,7 @@ class SyncViewer(QtWidgets.QWidget):
                 "view_index": end_button,
                 "start_button": end_button,
             }
-            self.update_preview()
+            self.update_annotations(self.doc.current_layer_index)
 
     def _get_pending_line_annotation(self, end: tuple[float, float], sides: list[int]):
         #Return a LineAnnotation based on the pending line
@@ -444,7 +449,6 @@ class SyncViewer(QtWidgets.QWidget):
             self.annotation_mode = False
         self.current_series_id = self.new_series_id()
         self.clear_preview()
-        self.update_annotations()
 
     def eventFilter(self, obj, event):
         if obj != self.glw.scene():

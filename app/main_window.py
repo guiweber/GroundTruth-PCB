@@ -296,20 +296,22 @@ class MainWindow(QMainWindow):
 
             # --------------- Select Mode
             if event.key() == Qt.Key.Key_X:
-                if self.viewer.annotation_mode:
-                    self.viewer.clear_preview()
-                    self.viewer.pending_line = None
-                    self.viewer.annotation_mode = False
-                elif self.viewer.select_mode:
+                if self.viewer.select_mode:
+                    self.viewer.select_mode = False
                     self.viewer.clear_selection()
-                self.viewer.select_mode = not self.viewer.select_mode
+                    self.viewer.clear_preview()
+                else:
+                    if self.viewer.annotation_mode:
+                        self.viewer.annotation_mode = False
+                        self.viewer.pending_line = None
+                    self.viewer.select_mode = True
+                    self.viewer.update_preview()
                 self.update_tool_indicator()
                 return
 
             # --------------- Clear Current Mode/Selection
             if event.key() == Qt.Key.Key_Escape:
                 if self.viewer.annotation_mode:
-                    self.viewer.clear_preview()
                     if self.viewer.pending_line is not None:
                         self.viewer.pending_line = None
                         self.viewer.current_series_id = self.viewer.new_series_id()
@@ -320,6 +322,7 @@ class MainWindow(QMainWindow):
                         self.viewer.clear_selection()
                     else:
                         self.viewer.select_mode = False
+                self.viewer.clear_preview()
                 self.update_tool_indicator()
                 return
 
