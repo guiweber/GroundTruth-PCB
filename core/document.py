@@ -257,9 +257,11 @@ class Layer:
         return self.items
 
     def add_annotation(self, annotation: Annotation):
+        annotation.layer = self
         self.items.append(annotation)
 
     def remove_annotation(self, annotation: Annotation):
+        annotation.layer = None
         self.items = [item for item in self.items if item.uid != annotation.uid]
 
     def clear_annotations(self):

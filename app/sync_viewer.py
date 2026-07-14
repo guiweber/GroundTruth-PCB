@@ -1,6 +1,6 @@
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, QEvent, QPointF
-from PyQt6.QtGui import QPen, QColor
+from PyQt6.QtGui import QColor
 import pyqtgraph as pg
 
 from core.annotations import Annotation, LineAnnotation, TextAnnotation, TYPE_LINE, TYPE_ARROW_F, TYPE_TEXT
@@ -8,6 +8,7 @@ from core.annotations import Annotation, LineAnnotation, TextAnnotation, TYPE_LI
 import copy
 import math
 import uuid
+from itertools import chain
 
 # Tools
 TOOL_LINE = "Line"
@@ -168,7 +169,8 @@ class SyncViewer(QtWidgets.QWidget):
         self.push_undo_state()
         annotation.text = text
         self.doc.get_current_layer().add_annotation(annotation)
-        self.update_annotations(self.doc.current_layer_index)
+        for side in getattr(annotation, "sides", []):
+            self._draw_annotation(annotation, side)
         return annotation
 
     def _viewbox_at(self, pos: QPointF):
@@ -224,16 +226,9 @@ class SyncViewer(QtWidgets.QWidget):
         view_index = self._viewbox_at(pos)
         return self._scene_to_view(pos, view_index)
 
-    def _draw_annotation(self, annotation: Annotation, side: int, color: str, alpha: float = 1.0, selected: bool = False):
-        qcolor = QColor(color)
-        qcolor.setAlphaF(alpha)
-
-        if selected:
-            # Use inverted color for selected annotations (solid)
-            qcolor = QColor(255 - qcolor.red(), 255 - qcolor.green(), 255 - qcolor.blue(), qcolor.alpha())
-
+    def _draw_annotation(self, annotation: Annotation, side: int):
         target_vb = self.vb1 if side == 0 else self.vb2
-        items = annotation.draw(side, qcolor, target_vb)
+        items = annotation.draw(side, annotation.get_qcolor(), target_vb)
 
         if items:
             for item in items:
@@ -254,9 +249,20 @@ class SyncViewer(QtWidgets.QWidget):
         self.pending_line = None
         self.update_annotations()
 
+    def delete_annotations(self, annotations):
+        vb = [self.vb1, self.vb2]
+        self.push_undo_state()
+        for ann in annotations:
+            ann.layer.remove_annotation(ann)
+            for side in list(self.annotation_graphics[ann.uid]):
+                for item in self.annotation_graphics[ann.uid][side]:
+                    vb[side].removeItem(item)
+            del self.annotation_graphics[ann.uid]
+
     def update_annotations(self, layer_index=None):
         if layer_index is None or layer_index == -1:
             self.clear_graphics()
+            # Make sure the current layer is always drawn on top
             layers_to_draw = [l for l in self.doc.layers if l is not self.doc.get_current_layer()] + [self.doc.get_current_layer()]
         else:
             self.clear_graphics(layer_index)
@@ -267,9 +273,30 @@ class SyncViewer(QtWidgets.QWidget):
                 continue
             for annotation in layer.get_annotations():
                 for side in getattr(annotation, "sides", []):
-                    self._draw_annotation(annotation, side, layer.color, layer.alpha, selected=annotation.selected)
+                    self._draw_annotation(annotation, side)
 
         self.update_preview()
+
+    def update_annotations_color(self, annotations: list[Annotation]):
+        for ann in annotations:
+            # This might be called when annotations are not currently visible, skip if no graphics present
+            if ann.uid in self.annotation_graphics:
+                for item in chain.from_iterable(self.annotation_graphics[ann.uid].values()):
+                    if isinstance(item, QtWidgets.QGraphicsTextItem):
+                        item.setDefaultTextColor(ann.get_qcolor())
+                    else:
+                        if isinstance(item, pg.PlotDataItem):
+                            pen = item.curve.opts['pen']
+                            brush = item.curve.opts["brush"]
+                        else:
+                            pen = item.pen()
+                            brush = item.brush()
+
+                        pen.setColor(ann.get_qcolor())
+                        item.setPen(pen)
+                        if brush is not None:
+                            brush.setColor(ann.get_qcolor())
+                            item.setBrush(brush)
 
     def update_preview(self, cursor_scene_pos: QPointF | None = None, shift_pressed=None):
         self.clear_preview()
@@ -365,13 +392,14 @@ class SyncViewer(QtWidgets.QWidget):
         self.selected_annotations = [ann for ann in layer.get_annotations() if getattr(ann, "series_id", None) == group_id]
         for ann in layer.get_annotations():
             ann.selected = ann in self.selected_annotations
-        self.update_annotations(self.doc.current_layer_index)
+
+        self.update_annotations_color(self.selected_annotations)
 
     def clear_selection(self):
         for ann in self.selected_annotations:
             ann.selected = False
+        self.update_annotations_color(self.selected_annotations)
         self.selected_annotations = []
-        self.update_annotations()
 
     def cycle_selected_subtype(self):
         if not self.selected_annotations:
@@ -411,7 +439,8 @@ class SyncViewer(QtWidgets.QWidget):
                 "view_index": end_button,
                 "start_button": end_button,
             }
-            self.update_annotations(self.doc.current_layer_index)
+            for side in getattr(line, "sides", []):
+                self._draw_annotation(line, side)
 
     def _get_pending_line_annotation(self, end: tuple[float, float], sides: list[int]):
         #Return a LineAnnotation based on the pending line
@@ -492,10 +521,11 @@ class SyncViewer(QtWidgets.QWidget):
         shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
         view_point = self._scene_to_view(event.scenePos(), view_index)
 
-        # Sides for non chained annotations
+        # Sides for non-chained annotations
         sides = [0, 1] if shift else [next_side]
 
-        if self.select_mode:
+        if self.select_mode and self.doc.get_current_layer().visible:
+            self.clear_selection()
             annotation, hit_type = self._find_annotation_hit(next_side, view_point)
             if annotation:
                 self.push_undo_state()
@@ -508,7 +538,6 @@ class SyncViewer(QtWidgets.QWidget):
                 self.drag_anchor = view_point
                 return True
             else:
-                self.clear_selection()
                 return False
 
         if self.annotation_mode and self.current_tool() == TOOL_TEXT:

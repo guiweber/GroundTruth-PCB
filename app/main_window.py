@@ -63,6 +63,7 @@ class MainWindow(QMainWindow):
         self.drop_zone.imagesAccepted.connect(self.on_images_accepted)
         self.layer_panel.panelMinimized.connect(self.on_layer_panel_minimized)
         self.layer_panel.layerChanged.connect(self.on_layer_changed)
+        self.layer_panel.layerSelected.connect(self.on_layer_selected)
 
         self.make_toolbar()
         self.update_ui_state()
@@ -110,7 +111,14 @@ class MainWindow(QMainWindow):
         self.update_tool_indicator()
 
     def on_layer_changed(self, index):
+        if index == self.doc.current_layer_index:
+            self.viewer.update_annotations(index)
+        else:
+            self.viewer.update_annotations()
+
+    def on_layer_selected(self, index):
         self.viewer.clear_selection()
+        self.viewer.update_annotations() # Update everything to preserve layer order
 
     def on_layer_panel_minimized(self, minimized):
             # Preserve the viewboxes range
@@ -314,12 +322,16 @@ class MainWindow(QMainWindow):
                         self.viewer.current_series_id = self.viewer.new_series_id()
                     else:
                         self.viewer.annotation_mode = False
+                    self.viewer.clear_preview()
+
                 elif self.viewer.select_mode:
                     if self.viewer.selected_annotations:
                         self.viewer.clear_selection()
+                        self.viewer.update_preview()
                     else:
                         self.viewer.select_mode = False
-                self.viewer.clear_preview()
+                        self.viewer.clear_preview()
+
                 self.update_tool_indicator()
                 return
 
@@ -332,14 +344,9 @@ class MainWindow(QMainWindow):
             # --------------- Delete
             if event.key() == Qt.Key.Key_Delete:
                 if self.viewer.select_mode and self.viewer.selected_annotations:
-                    self.viewer.push_undo_state()
-                    layer = self.doc.get_current_layer()
-                    removal_ids = {ann.uid for ann in self.viewer.selected_annotations}
-                    for ann in list(layer.get_annotations()):
-                        if ann.uid in removal_ids:
-                            layer.remove_annotation(ann)
+                    self.viewer.delete_annotations(self.viewer.selected_annotations)
                     self.viewer.selected_annotations = []
-                    self.viewer.update_annotations()
+                    self.viewer.update_preview()
                 return
 
             # --------------- Reset View Range

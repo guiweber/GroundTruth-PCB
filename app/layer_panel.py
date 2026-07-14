@@ -94,6 +94,7 @@ class LayerListWidget(QListWidget):
 
 class LayerPanel(QWidget):
     layerChanged = pyqtSignal(int)  # Pass the index of the changed layer or -1 for all layers
+    layerSelected = pyqtSignal(int)  # Pass the index of the selected layer
     panelMinimized = pyqtSignal(bool)
 
     def __init__(self, document, parent=None):
@@ -253,15 +254,14 @@ class LayerPanel(QWidget):
         self.update_property_panel()
 
     def select_layer(self, index: int):
-        """ Select layer by index, used by collapsed buttons """
-        # This event fires twice per list click, once with -1. Ignore the -1.
+        # This event fires several times per list click, once with -1. Ignore the -1.
         # Out of bound values can also be received via 0-9 keypresses, so filter them out.
         if index < 0 or index == self.selected_index or index >= len(self.doc.layers):
             return
         self.selected_index = index
         self.doc.current_layer_index = index
         self.doc.layers[index].visible = True
-        self.layerChanged.emit(index)
+        self.layerSelected.emit(index)
         if not self.minimized:
             self.layer_list.setCurrentRow(index)
         self.refresh_layers()
@@ -295,7 +295,6 @@ class LayerPanel(QWidget):
             return
         self.doc.layers[self.selected_index].name = text
         self.refresh_layers()
-        self.layerChanged.emit(self.selected_index)
 
     def open_color_picker(self):
         if self.selected_index < 0 or self.selected_index >= len(self.doc.layers):
@@ -352,7 +351,7 @@ class LayerPanel(QWidget):
         self.refresh_layers()
         if len(self.doc.layers) <= 1:
             self.delete_button.setEnabled(False)
-        self.layerChanged.emit(-1)
+        self.layerSelected.emit(self.selected_index)
 
     def add_layer(self):
 
@@ -362,7 +361,7 @@ class LayerPanel(QWidget):
         self.selected_index = index
         self.doc.current_layer_index = index
         self.refresh_layers()
-        self.layerChanged.emit(index)
+        self.layerSelected.emit(index)
         self.delete_button.setEnabled(True)
 
     def reorder_layers(self):
@@ -379,7 +378,7 @@ class LayerPanel(QWidget):
         self.selected_index = max(0, min(self.selected_index, len(self.doc.layers) - 1))
         self.doc.current_layer_index = self.selected_index
         self.refresh_layers()
-        self.layerChanged.emit(-1)
+        self.layerSelected.emit(self.selected_index)
 
     def update_property_panel(self):
         if self.selected_index < 0 or self.selected_index >= len(self.doc.layers):

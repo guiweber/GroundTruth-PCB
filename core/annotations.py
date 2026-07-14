@@ -6,6 +6,10 @@ from PyQt6.QtGui import QBrush, QPen, QPolygonF, QColor, QFont, QTransform
 from PyQt6.QtCore import Qt, QPointF
 import pyqtgraph as pg
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from core.document import Layer
+
 
 # Annotation types
 TYPE_TEXT = "Text"
@@ -22,6 +26,7 @@ class Annotation:
         self.sides = sides
         self.series_id = series_id or str(uuid.uuid4())
         self.selected = False
+        self.layer: Layer|None = None
 
     def cycle_subtype(self, available_subtypes: list[str]):
         if self.subtype not in available_subtypes:
@@ -42,6 +47,19 @@ class Annotation:
 
     def move_endpoint(self, endpoint_index: int, dx: float, dy: float):
         raise NotImplementedError
+
+    def get_qcolor(self):
+        if self.layer is None:
+            qcolor = QColor("white")
+        else:
+            qcolor = QColor(self.layer.color)
+            qcolor.setAlphaF(self.layer.alpha)
+
+        if self.selected:
+            # Use inverted color for selected annotations
+            qcolor = QColor(255 - qcolor.red(), 255 - qcolor.green(), 255 - qcolor.blue(), qcolor.alpha())
+
+        return qcolor
 
 
 class TextAnnotation(Annotation):
